@@ -4,8 +4,6 @@ from fastapi import FastAPI
 from pydantic import BaseModel  # TODO look more into validation
 import psycopg2 as dbAdapter
 from contextlib import contextmanager
-# TODO clean up to my standards
-# TODO add DEBUG highlight to VScode
 
 
 DB_USER = os.getenv("DB_FASTAPI_USER")
@@ -72,7 +70,7 @@ def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
                                VALUES (%s, %s)
                                RETURNING id_t;""",
                             (payload.title, payload.subtitle))
-                (id_t,) = cur.fetchone()
+                (id_t,) = cur.fetchone() or (None,)
 
                 # 2. Insert delta
                 cur.execute("""INSERT INTO deltas (ts, amount, id_a, tag)
@@ -82,7 +80,7 @@ def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
                              payload.delta.amount,
                              payload.delta.id_a,
                              payload.delta.tag))
-                (id_d,) = cur.fetchone()
+                (id_d,) = cur.fetchone() or (None,)
 
                 # 3. Link delta to transaction
                 cur.execute("""INSERT INTO deltasPerTransaction (id_t, id_d)
@@ -109,7 +107,7 @@ def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
                              payload.delta.amount,
                              payload.delta.id_a,
                              payload.delta.tag))
-                (id_d,) = cur.fetchone()
+                (id_d,) = cur.fetchone() or (None,)
 
                 # 3. Link delta to transaction
                 cur.execute("""INSERT INTO deltasPerTransaction (id_t, id_d)
@@ -142,7 +140,7 @@ def getAccounts() -> list[dict[str, Any]] | dict[str, str]:
         return {"status": "error", "detail": str(e)}
 
 
-@app.get("/tags")  # TODO
+@app.get("/tags")
 def getTags() -> list[dict[str, Any]] | dict[str, str]:
     try:
         with dbSession() as conn:
@@ -195,9 +193,9 @@ def getTransactions():
                                                  "account": account,
                                                  "tag": tag,
                                                  "ts": ts.isoformat() if ts else None,
-                                                 "ts_log": ts_log.isoformat()
-                                                           if ts_log
-                                                           else None})
+                                                 "ts_log": (ts_log.isoformat()
+                                                            if ts_log
+                                                            else None)})
 
         return list(transactions.values())
     except Exception as e:
