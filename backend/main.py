@@ -40,6 +40,7 @@ def dbSession():
 
 class DeltaIn(BaseModel):
     ts: str  # ISO date from frontend
+    subtitle: str | None = None
     amount: float
     id_a: int
     tag: int
@@ -48,7 +49,6 @@ class DeltaIn(BaseModel):
 
 class TransactionWithDelta(BaseModel):
     title: str
-    subtitle: str | None = None
     delta: DeltaIn
 
 
@@ -66,20 +66,21 @@ def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
         with dbSession() as conn:
             with conn.cursor() as cur:
                 # 1. Insert transaction
-                cur.execute("""INSERT INTO transactions (title, subtitle)
-                               VALUES (%s, %s)
+                cur.execute("""INSERT INTO transactions (title)
+                               VALUES (%s)
                                RETURNING id_t;""",
-                            (payload.title, payload.subtitle))
+                            (payload.title))
                 (id_t,) = cur.fetchone() or (None,)
 
                 # 2. Insert delta
-                cur.execute("""INSERT INTO deltas (ts, amount, id_a, tag)
-                               VALUES (%s, %s, %s, %s)
+                cur.execute("""INSERT INTO deltas (ts, amount, id_a, tag, subtitle)
+                               VALUES (%s, %s, %s, %s, %s)
                                RETURNING id_d;""",
                             (payload.delta.ts,
                              payload.delta.amount,
                              payload.delta.id_a,
-                             payload.delta.tag))
+                             payload.delta.tag,
+                             payload.delta.subtitle))
                 (id_d,) = cur.fetchone() or (None,)
 
                 # 3. Link delta to transaction
@@ -100,13 +101,14 @@ def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
         with dbSession() as conn:
             with conn.cursor() as cur:
                 # 1. Insert delta
-                cur.execute("""INSERT INTO deltas (ts, amount, id_a, tag)
-                               VALUES (%s, %s, %s, %s)
+                cur.execute("""INSERT INTO deltas (ts, amount, id_a, tag, subtitle)
+                               VALUES (%s, %s, %s, %s, %s)
                                RETURNING id_d;""",
                             (payload.delta.ts,
                              payload.delta.amount,
                              payload.delta.id_a,
-                             payload.delta.tag))
+                             payload.delta.tag,
+                             payload.delta.subtitle))
                 (id_d,) = cur.fetchone() or (None,)
 
                 # 3. Link delta to transaction
@@ -156,6 +158,19 @@ def getTags() -> list[dict[str, Any]] | dict[str, str]:
         return {"status": "error", "detail": str(e)}
 
 
+@app.get("/pinned")
+def getPinned() -> list[int] | dict[str, str]:
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""SELECT p.id_t
+                               FROM pinnedTransactions p;""")
+                rows = cur.fetchall()
+        return [int(id_t) for (id_t,) in rows]
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
+
+
 @app.get("/transactions")
 def getTransactions():
     try:
@@ -163,7 +178,7 @@ def getTransactions():
             with conn.cursor() as cur:
                 cur.execute("""SELECT t.id_t,
                                       t.title,
-                                      t.subtitle,
+                                      d.subtitle,
                                       tags.tag_name,
                                       d.id_d,
                                       d.amount,
@@ -198,5 +213,51 @@ def getTransactions():
                                                             else None)})
 
         return list(transactions.values())
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
+
+
+@app.get("/deltaLog")
+def getDeltaLog():
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""SELECT t.id_t,
+                                      t.title,
+                                      d.subtitle,
+                                      tags.tag_name,
+                                      d.id_d,
+                                      d.amount,
+                                      a.currency,
+                                      a.account,
+                                      d.ts,
+                                      d.ts_log
+                               FROM transactions t
+                               JOIN deltasPerTransaction dt ON dt.id_t = t.id_t
+                               JOIN deltas d ON d.id_d = dt.id_d
+                               JOIN accounts a ON a.id_a = d.id_a
+                               LEFT JOIN tags ON tags.tag = d.tag
+                               ORDER BY d.ts_log;""")
+                rows = cur.fetchall()
+
+        transactions = []
+        for id_t, title, subtitle, tag, id_d, amount, curr, account, ts, ts_log in rows:
+            if not len(transactions) or id_t != transactions[-1]:
+                transactions.append({"id": id_t,
+                                     "title": title,
+                                     "deltas": []})
+
+            transactions[-1]["deltas"].append({"id": id_d,
+                                               "subtitle": subtitle,
+                                               "amount": str(amount),  # TODO float ?
+                                               "currency": curr,  # TODO swap € ?
+                                               "account": account,
+                                               "tag": tag,
+                                               "ts": ts.isoformat() if ts else None,
+                                               "ts_log": (ts_log.isoformat()
+                                                          if ts_log
+                                                          else None)})
+
+        return transactions
     except Exception as e:
         return {"status": "error", "detail": str(e)}

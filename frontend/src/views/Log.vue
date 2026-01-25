@@ -5,6 +5,7 @@ styling
 -> group if neighbouring are the same transaction??
 
 transaction pinning
+-> db logic done, missing pin/unpin buttons
 
 
 
@@ -19,16 +20,16 @@ DONE
 -->
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { VueDatePicker } from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 
 const today = new Date().toISOString();
 const form = ref({
   title: "",
-  subtitle: "",
   delta: {
     ts: today,
+    subtitle: "",
     amount: null,
     id_a: null,
     tag: null,
@@ -39,9 +40,14 @@ const form = ref({
 const transactions = ref([]);
 const accounts = ref([]);
 const tags = ref([]);
+const pinnedId_t = ref([]);
+
+const pinnedTransactions = computed(() =>
+  transactions.value.filter((t) => pinnedId_t.value.includes(t.id)),
+);
 
 const loadTransactions = async () => {
-  const res = await fetch("/api/transactions");
+  const res = await fetch("/api/deltaLog");
   transactions.value = await res.json();
 };
 
@@ -55,41 +61,36 @@ const loadTags = async () => {
   tags.value = await res.json();
 };
 
+const loadPinned = async () => {
+  const res = await fetch("/api/pinned");
+  pinnedId_t.value = await res.json();
+};
+
 const selectedTransaction = ref(null);
 const clearSelection = () => {
   selectedTransaction.value = null;
 };
 
 let stashedTitle = null;
-let stashedSubtitle = null;
 watch(selectedTransaction, (newId) => {
   if (newId === null) {
     form.value.title = stashedTitle;
     stashedTitle = null;
-    form.value.subtitle = stashedSubtitle;
-    stashedSubtitle = null;
     return;
   }
 
   if (stashedTitle === null) {
     stashedTitle = form.value.title;
-    stashedSubtitle = form.value.subtitle;
   }
 
   const transaction = transactions.value.find((t) => t.id === newId);
   if (!transaction) return;
 
   form.value.title = transaction.title;
-  form.value.subtitle = transaction.subtitle ?? " ";
 });
 
 const submit = async () => {
   if (selectedTransaction.value) {
-    // console.log('adding to existing')
-    // console.log(JSON.stringify({
-    //     id_t: selectedTransaction.value,
-    //     delta: form.value.delta
-    //   }))
     const response = await fetch("/api/transactions/existing", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -99,27 +100,22 @@ const submit = async () => {
       }),
     });
 
-    const data = await response.json();
-    // console.log(data)
+    const data = await response.json(); // TODO pop-up about success/fail
     clearSelection();
   } else {
-    // console.log('adding new')
-    // console.log(JSON.stringify(form.value))
     const response = await fetch("/api/transactions/new", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form.value),
     });
 
-    const data = await response.json();
-    // console.log(data)
+    const data = await response.json(); // TODO pop-up about success/fail
   }
   form.value.title = null;
   form.value.subtitle = null;
   form.value.delta.amount = null;
   form.value.delta.id_a = null;
   form.value.delta.tag = null;
-  form.value.delta.note = null; // TODO note for deltas implement in db
   loadTransactions();
 };
 
@@ -127,23 +123,58 @@ onMounted(() => {
   loadTransactions();
   loadAccounts();
   loadTags();
+  loadPinned();
 });
 </script>
 
 <template>
   <div class="container">
     <div class="left">
+      <h2>Pined Transactions</h2>
+      <button @click="clearSelection">Clear selected transaction</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Select</th>
+            <th>Title</th>
+            <th>Subtitle</th>
+            <th>Amount</th>
+            <th>Account</th>
+            <th>Tag</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-for="t in pinnedTransactions" :key="t.id">
+            <tr v-for="(d, idx) in t.deltas" :key="d.id">
+              <td>
+                <input
+                  type="radio"
+                  name="t_select"
+                  :value="t.id"
+                  v-model="selectedTransaction"
+                />
+              </td>
+              <td>{{ t.title }}</td>
+              <td>{{ d.subtitle }}</td>
+              <td>{{ d.amount }}</td>
+              <td>{{ d.account }} ({{ d.currency }})</td>
+              <td>{{ d.tag }}</td>
+              <td>{{ d.ts }}</td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+
       <h2>Existing Transactions</h2>
       <button @click="clearSelection">Clear selected transaction</button>
       <table>
         <thead>
           <tr>
             <th>Select</th>
-            <th>ID</th>
             <th>Title</th>
             <th>Subtitle</th>
             <th>Amount</th>
-            <th>Currency</th>
             <th>Account</th>
             <th>Tag</th>
             <th>Timestamp</th>
@@ -160,12 +191,10 @@ onMounted(() => {
                   v-model="selectedTransaction"
                 />
               </td>
-              <td>{{ t.id }}</td>
               <td>{{ t.title }}</td>
-              <td>{{ t.subtitle }}</td>
+              <td>{{ d.subtitle }}</td>
               <td>{{ d.amount }}</td>
-              <td>{{ d.currency }}</td>
-              <td>{{ d.account }}</td>
+              <td>{{ d.account }} ({{ d.currency }})</td>
               <td>{{ d.tag }}</td>
               <td>{{ d.ts }}</td>
             </tr>
@@ -181,11 +210,7 @@ onMounted(() => {
         placeholder="Name"
         :disabled="selectedTransaction !== null"
       />
-      <input
-        v-model="form.subtitle"
-        placeholder="Description"
-        :disabled="selectedTransaction !== null"
-      />
+      <input v-model="form.delta.subtitle" placeholder="Description" />
 
       <input v-model="form.delta.note" placeholder="Note" />
       <VueDatePicker
