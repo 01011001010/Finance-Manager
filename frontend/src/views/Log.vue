@@ -1,12 +1,11 @@
 <!-- TODO
+tag and account management
+
 data validation on submit
 
 styling
 -> group if neighbouring are the same transaction??
-
-transaction pinning
--> db logic done, missing pin/unpin buttons
-
+-> pinned transactions hide deltas into a rolldown
 
 
 DONE
@@ -17,6 +16,7 @@ DONE
    but I want to stash the contents, replace them with the info from the selected transaction
    and if clear button used, then put back what was there
  - tag hardcoding removal
+ - pin transaction
 -->
 
 <script setup>
@@ -89,28 +89,6 @@ watch(selectedTransaction, (newId) => {
 });
 
 const submit = async () => {
-  // if (selectedTransaction.value) {
-  //   const response = await fetch("/api/transactions/existing", {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify({
-  //       id_t: selectedTransaction.value,
-  //       delta: form.value.delta,
-  //     }),
-  //   });
-
-  //   const data = await response.json(); // TODO pop-up about success/fail
-  //   clearSelection();
-  // } else {
-  //   const response = await fetch("/api/transactions/new", {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify(form.value)
-  //   });
-
-  //   const data = await response.json(); // TODO pop-up about success/fail
-  // }
-
   const API = selectedTransaction.value
     ? "/api/transactions/existing"
     : "/api/transactions/new";
