@@ -43,8 +43,7 @@ class DeltaIn(BaseModel):
     subtitle: str | None = None
     amount: float
     id_a: int
-    tag: int
-    note: str | None = None
+    tag: int | None = None
 
 
 class TransactionWithDelta(BaseModel):
@@ -55,6 +54,10 @@ class TransactionWithDelta(BaseModel):
 class AddingDelta(BaseModel):
     id_t: int
     delta: DeltaIn
+
+
+class PinId(BaseModel):
+    id_t: int
 
 
 app = FastAPI()
@@ -89,7 +92,7 @@ def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
                             (id_t, id_d))
 
                 return {"status": "ok",
-                        "detail": f"Transaction {payload.id_t} linked to delta {id_d}"}
+                        "detail": f"Transaction {id_t} and {id_d} added and linked"}
 
     except Exception as e:
         return {"status": "error", "detail": str(e)}
@@ -111,7 +114,7 @@ def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
                              payload.delta.subtitle))
                 (id_d,) = cur.fetchone() or (None,)
 
-                # 3. Link delta to transaction
+                # 2. Link delta to transaction
                 cur.execute("""INSERT INTO deltasPerTransaction (id_t, id_d)
                                VALUES (%s, %s);""",
                             (payload.id_t, id_d))
@@ -121,6 +124,37 @@ def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
 
     except Exception as e:
         return {"status": "error", "detail": str(e)}
+
+
+def pinUnpin(payload: PinId, insert: bool):
+    QUERY = ("""INSERT INTO pinnedTransactions (id_t)
+                VALUES (%s);"""
+             if insert else
+             """DELETE FROM pinnedTransactions
+                WHERE id_t = %s;""")
+    UN = "" if insert else "un"
+
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                cur.execute(QUERY,
+                            (payload.id_t,))
+
+                return {"status": "ok",
+                        "detail": f"Transaction {payload.id_t} {UN}pinned successfully"}
+
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
+
+
+@app.post("/transactions/pin")
+def pinTransaction(payload: PinId) -> dict[str, str]:
+    return pinUnpin(payload, True)
+
+
+@app.post("/transactions/unpin")
+def unpinTransaction(payload: PinId) -> dict[str, str]:
+    return pinUnpin(payload, False)
 
 
 @app.get("/accounts")
@@ -209,8 +243,8 @@ def getTransactions():
                                                  "tag": tag,
                                                  "ts": ts.isoformat() if ts else None,
                                                  "ts_log": (ts_log.isoformat()
-                                                            if ts_log
-                                                            else None)})
+                                                            if ts_log else
+                                                            None)})
 
         return list(transactions.values())
     except Exception as e:
@@ -255,8 +289,8 @@ def getDeltaLog():
                                                "tag": tag,
                                                "ts": ts.isoformat() if ts else None,
                                                "ts_log": (ts_log.isoformat()
-                                                          if ts_log
-                                                          else None)})
+                                                          if ts_log else
+                                                          None)})
 
         return transactions
     except Exception as e:

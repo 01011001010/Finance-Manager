@@ -15,7 +15,7 @@ This full-stack engine is being developed as a personal project to replace manua
 
 <!-- TODO: add example images -->
 
-Feel free to adapt this project to your needs or use it as a starting point for your own project. 
+Feel free to adapt this project to your needs or use it as a starting point for your own project.
 
 <!-- TODO: showcase current data model -->
 
@@ -65,12 +65,12 @@ docker compose up -d --build
 - [x] Foundational Architecture
 - [x] Transaction logging
 - [ ] Account and tag management
-- [ ] Transaction pinning
+- [x] Pin transaction
 - [ ] Transaction overview
     - [ ] Multi-day transactions
     - [ ] Account state tracking
 - [ ] Advanced analytics display
-- [ ] Household inventory 
+- [ ] Household inventory
     - [ ] Stock display and alerts
     - [ ] Food cost and nutrition log
 - [ ] ...

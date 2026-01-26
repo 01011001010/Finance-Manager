@@ -33,7 +33,6 @@ const form = ref({
     amount: null,
     id_a: null,
     tag: null,
-    note: null,
   },
 });
 
@@ -90,33 +89,84 @@ watch(selectedTransaction, (newId) => {
 });
 
 const submit = async () => {
-  if (selectedTransaction.value) {
-    const response = await fetch("/api/transactions/existing", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  // if (selectedTransaction.value) {
+  //   const response = await fetch("/api/transactions/existing", {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({
+  //       id_t: selectedTransaction.value,
+  //       delta: form.value.delta,
+  //     }),
+  //   });
+
+  //   const data = await response.json(); // TODO pop-up about success/fail
+  //   clearSelection();
+  // } else {
+  //   const response = await fetch("/api/transactions/new", {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify(form.value)
+  //   });
+
+  //   const data = await response.json(); // TODO pop-up about success/fail
+  // }
+
+  const API = selectedTransaction.value
+    ? "/api/transactions/existing"
+    : "/api/transactions/new";
+  const BODY = selectedTransaction.value
+    ? JSON.stringify({
         id_t: selectedTransaction.value,
         delta: form.value.delta,
-      }),
-    });
+      })
+    : JSON.stringify(form.value);
+  console.log(API);
+  console.log(BODY);
 
-    const data = await response.json(); // TODO pop-up about success/fail
-    clearSelection();
-  } else {
-    const response = await fetch("/api/transactions/new", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form.value),
-    });
+  const response = await fetch(API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: BODY,
+  });
+  const data = await response.json(); // TODO pop-up about success/fail
+  console.log(data);
 
-    const data = await response.json(); // TODO pop-up about success/fail
-  }
   form.value.title = null;
-  form.value.subtitle = null;
+  form.value.delta.subtitle = null;
   form.value.delta.amount = null;
   form.value.delta.id_a = null;
   form.value.delta.tag = null;
   loadTransactions();
+};
+
+const isPinned = (id) => pinnedId_t.value.includes(id);
+
+const pinTransaction = async (id) => {
+  if (!pinnedId_t.value.includes(id)) {
+    const response = await fetch("/api/transactions/pin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id_t: id,
+      }),
+    });
+
+    const data = await response.json(); // TODO pop-up about success/fail
+    loadPinned();
+  }
+};
+
+const unpinTransaction = async (id) => {
+  const response = await fetch("/api/transactions/unpin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id_t: id,
+    }),
+  });
+
+  const data = await response.json(); // TODO pop-up about success/fail
+  loadPinned();
 };
 
 onMounted(() => {
@@ -136,6 +186,7 @@ onMounted(() => {
         <thead>
           <tr>
             <th>Select</th>
+            <th>Pin</th>
             <th>Title</th>
             <th>Subtitle</th>
             <th>Amount</th>
@@ -155,6 +206,14 @@ onMounted(() => {
                   v-model="selectedTransaction"
                 />
               </td>
+              <td>
+                <button
+                  @click="unpinTransaction(t.id)"
+                  title="Unpin transaction"
+                >
+                  ❌
+                </button>
+              </td>
               <td>{{ t.title }}</td>
               <td>{{ d.subtitle }}</td>
               <td>{{ d.amount }}</td>
@@ -172,6 +231,7 @@ onMounted(() => {
         <thead>
           <tr>
             <th>Select</th>
+            <th>Pin</th>
             <th>Title</th>
             <th>Subtitle</th>
             <th>Amount</th>
@@ -190,6 +250,23 @@ onMounted(() => {
                   :value="t.id"
                   v-model="selectedTransaction"
                 />
+              </td>
+              <td>
+                <button
+                  v-if="!isPinned(t.id)"
+                  @click="pinTransaction(t.id)"
+                  title="Pin transaction"
+                >
+                  📌
+                </button>
+
+                <button
+                  v-else
+                  @click="unpinTransaction(t.id)"
+                  title="Unpin transaction"
+                >
+                  ❌
+                </button>
               </td>
               <td>{{ t.title }}</td>
               <td>{{ d.subtitle }}</td>
@@ -212,7 +289,6 @@ onMounted(() => {
       />
       <input v-model="form.delta.subtitle" placeholder="Description" />
 
-      <input v-model="form.delta.note" placeholder="Note" />
       <VueDatePicker
         v-model="form.delta.ts"
         inline
