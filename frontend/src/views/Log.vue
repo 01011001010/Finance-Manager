@@ -23,19 +23,9 @@ DONE
 import { ref, onMounted, watch, computed } from "vue";
 import { VueDatePicker } from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
+import SlidePanel from "@/components/SlidePanel.vue";
 
-const today = new Date().toISOString();
-const form = ref({
-  title: "",
-  delta: {
-    ts: today,
-    subtitle: "",
-    amount: null,
-    id_a: null,
-    tag: null,
-  },
-});
-
+// Data loading
 const transactions = ref([]);
 const accounts = ref([]);
 const tags = ref([]);
@@ -77,74 +67,116 @@ watch(selectedTransaction, (newId) => {
     stashedTitle = null;
     return;
   }
-
   if (stashedTitle === null) {
     stashedTitle = form.value.title;
   }
-
   const transaction = transactions.value.find((t) => t.id === newId);
   if (!transaction) return;
-
   form.value.title = transaction.title;
 });
 
-const submit = async () => {
-  const API = selectedTransaction.value
-    ? "/api/transactions/existing"
-    : "/api/transactions/new";
-  const BODY = selectedTransaction.value
-    ? JSON.stringify({
-        id_t: selectedTransaction.value,
-        delta: form.value.delta,
-      })
-    : JSON.stringify(form.value);
-  console.log(API);
-  console.log(BODY);
-
-  const response = await fetch(API, {
+const post = async (url, body) => {
+  const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: BODY,
+    body: body,
   });
-  const data = await response.json(); // TODO pop-up about success/fail
-  console.log(data);
+  return await response.json();
+};
 
+// Transaction form
+const today = new Date().toISOString();
+const form = ref({
+  title: "",
+  delta: {
+    ts: today,
+    subtitle: "",
+    amount: null,
+    id_a: null,
+    tag: null,
+  },
+});
+const submitAddTransaction = async () => {
+  const url = selectedTransaction.value
+    ? "/api/transactions/existing"
+    : "/api/transactions/new";
+  const payload = JSON.stringify(
+    selectedTransaction.value
+      ? {
+          id_t: selectedTransaction.value,
+          delta: form.value.delta,
+        }
+      : form.value,
+  );
+  const data = await post(url, payload); // TODO pop-up about success/fail
   form.value.title = null;
   form.value.delta.subtitle = null;
   form.value.delta.amount = null;
   form.value.delta.id_a = null;
   form.value.delta.tag = null;
-  loadTransactions();
+  await loadTransactions();
 };
 
+// Tag form
+const newTag = ref({
+  tag: null,
+});
+const submitNewTag = async () => {
+  const url = "/api/add/tag"; // TODO implement
+  const payload = JSON.stringify(newTag.value);
+  const data = await post(url, payload); // TODO pop-up about success/fail
+  newTag.tag = null;
+  await loadTags();
+};
+
+// Account form
+const newAccount = ref({
+  name: "",
+  currency: "",
+  balance: "",
+});
+
+const submitNewAccount = async () => {
+  const url = "/api/add/account"; // TODO implement
+  const body = JSON.stringify(newAccount.value);
+  const data = await post(url, payload); // TODO pop-up about success/fail
+  newAccount.name = null;
+  newAccount.currency = null;
+  newAccount.balance = null;
+  await loadAccounts();
+};
+
+// Pinned transactions
 const isPinned = (id) => pinnedId_t.value.includes(id);
-
 const pinTransaction = async (id) => {
+  // TODO, decide if frontend or backend should check this condition
   if (!pinnedId_t.value.includes(id)) {
-    const response = await fetch("/api/transactions/pin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id_t: id,
-      }),
-    });
-
-    const data = await response.json(); // TODO pop-up about success/fail
-    loadPinned();
+    const url = "/api/transactions/pin";
+    const body = JSON.stringify({ id_t: id });
+    const data = await post(url, payload); // TODO pop-up about success/fail
+    await loadPinned();
   }
 };
 
 const unpinTransaction = async (id) => {
-  const response = await fetch("/api/transactions/unpin", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      id_t: id,
-    }),
-  });
+  const url = "/api/transactions/unpin";
+  const body = JSON.stringify({ id_t: id });
+  const data = await post(url, payload); // TODO pop-up about success/fail
+  await loadPinned();
+};
 
-  const data = await response.json(); // TODO pop-up about success/fail
-  loadPinned();
+// Sliding side-panels
+const showTagPanel = ref(false);
+const showAccountPanel = ref(false);
+
+const panelTagInput = ref(null);
+const panelAccountNameInput = ref(null);
+
+const closePanels = () => {
+  // Not necessarily needed, as the pull-out tabs of other panels are hidden under any open panel.
+  // Kept for future-proofing and manual tempering with z-index
+  showTagPanel.value = false;
+  showAccountPanel.value = false;
 };
 
 onMounted(() => {
@@ -290,8 +322,43 @@ onMounted(() => {
           {{ tag.tag_name }}
         </option>
       </select>
-      <button @click="submit">Submit</button>
+      <button @click="submitAddTransaction">Submit</button>
     </div>
+
+    <SlidePanel
+      v-model="showTagPanel"
+      tabPosition="50px"
+      tabLabel="Add Tags"
+      @open="closePanels"
+      @opened="panelTagInput?.focus()"
+    >
+      <h3>Add a tag</h3>
+      <input v-model="newTag.tag" ref="panelTagInput" placeholder="Tag" />
+      <button @click="submitNewTag">Add</button>
+    </SlidePanel>
+    <SlidePanel
+      v-model="showAccountPanel"
+      tabPosition="200px"
+      tabLabel="Add Accounts"
+      @open="closePanels"
+      @opened="panelAccountNameInput?.focus()"
+    >
+      <h3>Add an account</h3>
+      <input
+        v-model="newAccount.name"
+        ref="panelAccountNameInput"
+        placeholder="Name"
+      />
+      <input v-model="newAccount.currency" placeholder="Currency" />
+      <input v-model="newAccount.balance" placeholder="Balance" />
+      <VueDatePicker
+        v-model="newAccount.date"
+        inline
+        :time-config="{ timePickerInline: true }"
+        auto-apply
+      />
+      <button @click="submitNewAccount">Add</button>
+    </SlidePanel>
   </div>
 </template>
 
