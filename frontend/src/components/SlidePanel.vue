@@ -1,4 +1,6 @@
 <script setup>
+import { ref } from "vue";
+
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -14,20 +16,29 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "open", "opened"]);
+const emit = defineEmits(["update:modelValue", "opening", "opened"]);
 
-const handleToggle = () => {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const currentZIndex = ref(props.modelValue ? 1001 : 1000);
+const handleToggle = async () => {
   const newState = !props.modelValue;
   if (newState === true) {
-    emit("open");
+    currentZIndex.value = 1001;
+    emit("opening");
   }
   emit("update:modelValue", newState);
-  emit("opened");
+  if (newState === true) {
+    emit("opened");
+  } else {
+    await sleep(300);
+    currentZIndex.value = 1000;
+  }
 };
 </script>
 
 <template>
-  <div class="panel-container" :style="{ zIndex: modelValue ? 1001 : 1000 }">
+  <div class="panel-container" :style="{ zIndex: currentZIndex }">
     <div class="slide-group" :class="{ open: modelValue }">
       <div
         class="slide-tab"

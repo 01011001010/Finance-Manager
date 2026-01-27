@@ -1,5 +1,7 @@
 <!-- TODO
 tag and account management
+-> frontend done
+-> TODO backend
 
 data validation on submit
 
@@ -329,7 +331,7 @@ onMounted(() => {
       v-model="showTagPanel"
       tabPosition="50px"
       tabLabel="Add Tags"
-      @open="closePanels"
+      @opening="closePanels"
       @opened="panelTagInput?.focus()"
     >
       <h3>Add a tag</h3>
@@ -340,7 +342,7 @@ onMounted(() => {
       v-model="showAccountPanel"
       tabPosition="200px"
       tabLabel="Add Accounts"
-      @open="closePanels"
+      @opening="closePanels"
       @opened="panelAccountNameInput?.focus()"
     >
       <h3>Add an account</h3>
