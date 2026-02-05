@@ -1,8 +1,9 @@
 import os
 from typing import Any
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel  # TODO look more into validation
 import psycopg2 as dbAdapter
+from psycopg2 import errors as dbErrors
 from contextlib import contextmanager
 
 
@@ -56,6 +57,10 @@ class AddingDelta(BaseModel):
     delta: DeltaIn
 
 
+class AddingTag(BaseModel):
+    tag_name: str
+
+
 class PinId(BaseModel):
     id_t: int
 
@@ -72,7 +77,7 @@ def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
                 cur.execute("""INSERT INTO transactions (title)
                                VALUES (%s)
                                RETURNING id_t;""",
-                            (payload.title))
+                            (payload.title,))
                 (id_t,) = cur.fetchone() or (None,)
 
                 # 2. Insert delta
@@ -155,6 +160,29 @@ def pinTransaction(payload: PinId) -> dict[str, str]:
 @app.post("/transactions/unpin")
 def unpinTransaction(payload: PinId) -> dict[str, str]:
     return pinUnpin(payload, False)
+
+
+@app.post("/add/tag")
+def addTag(payload: AddingTag) -> dict[str, str]:
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""INSERT INTO tags (tag_name)
+                               VALUES (%s)
+                               RETURNING tag;""",
+                            (payload.tag_name,))
+                (tag,) = cur.fetchone() or (None,)
+
+                return {"status": "ok",
+                        "detail": f"Tag {payload.tag_name} added under id {tag}"}
+    except dbErrors.UniqueViolation:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Tag '{payload.tag_name}' already exists."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
 @app.get("/accounts")

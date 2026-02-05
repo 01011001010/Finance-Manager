@@ -121,14 +121,26 @@ const submitAddTransaction = async () => {
 
 // Tag form
 const newTag = ref({
-  tag: null,
+  tag_name: null,
 });
 const submitNewTag = async () => {
-  const url = "/api/add/tag"; // TODO implement
+  const url = "/api/add/tag";
   const payload = JSON.stringify(newTag.value);
-  const data = await post(url, payload); // TODO pop-up about success/fail
-  newTag.tag = null;
-  await loadTags();
+  console.log(payload);
+  const response = await post(url, payload);
+  console.log(response); // DEV
+  if (response.ok) {
+    console.log("ok Toast"); // DEV
+    // TODO success message
+    newTag.value.tag_name = null;
+    await loadTags();
+  } else if (response.statue === 409) {
+    console.log("duplicate warning Toast"); // DEV
+    // TODO duplicate warning message
+  } else {
+    console.log("something went wrong Toast"); // DEV
+    // TODO error message
+  }
 };
 
 // Account form
@@ -335,7 +347,7 @@ onMounted(() => {
       @opened="panelTagInput?.focus()"
     >
       <h3>Add a tag</h3>
-      <input v-model="newTag.tag" ref="panelTagInput" placeholder="Tag" />
+      <input v-model="newTag.tag_name" ref="panelTagInput" placeholder="Tag" />
       <button @click="submitNewTag">Add</button>
     </SlidePanel>
     <SlidePanel
