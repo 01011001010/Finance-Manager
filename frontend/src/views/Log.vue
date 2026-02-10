@@ -1,62 +1,50 @@
 <!-- TODO
+transition to PrimeVue
+
 tag and account management
--> frontend done
--> TODO backend
+-> account addition
+-> account hiding
+-> tag hiding
 
 data validation on submit
 
 styling
 -> group if neighbouring are the same transaction??
--> pinned transactions hide deltas into a rolldown
-
-
-DONE
- - move the tag to delta from transaction (eg. rent, and bank fees as 2 separate deltas)
- - replace hardcoded accounts, ...
-   + allow currency based on choice of account
- - when selecting a transaction, greying out is ok,
-   but I want to stash the contents, replace them with the info from the selected transaction
-   and if clear button used, then put back what was there
- - tag hardcoding removal
- - pin transaction
+-> pinned transactions hide deltas into a rolldown (see PrimeVue Tree)
 -->
 
 <script setup>
-import { ref, onMounted, watch, computed } from "vue";
-import { VueDatePicker } from "@vuepic/vue-datepicker";
-import "@vuepic/vue-datepicker/dist/main.css";
-import SlidePanel from "@/components/SlidePanel.vue";
+import { ref, onMounted, watch } from "vue";
+import Drawer from "primevue/drawer";
+import Menubar from "primevue/menubar";
+import DatePicker from "primevue/datepicker";
+import { customToaster } from "@/composables/customToast";
+import { dataLoaders, apiPost } from "@/composables/api";
+
+import NewTag from "@/components/NewTag.vue";
+
+// const vFocustrap = FocusTrap;
+
+// Toast
+const { successToast, neutralToast, errorToast } = customToaster();
 
 // Data loading
-const transactions = ref([]);
-const accounts = ref([]);
-const tags = ref([]);
-const pinnedId_t = ref([]);
+const {
+  transactions,
+  accounts,
+  tags,
+  pinnedId_t,
+  pinnedTransactions,
+  loadTransactions,
+  loadAccounts,
+  loadTags,
+  loadPinned,
+} = dataLoaders();
 
-const pinnedTransactions = computed(() =>
-  transactions.value.filter((t) => pinnedId_t.value.includes(t.id)),
-);
+// API POST
+const { post } = apiPost();
 
-const loadTransactions = async () => {
-  const res = await fetch("/api/deltaLog");
-  transactions.value = await res.json();
-};
-
-const loadAccounts = async () => {
-  const res = await fetch("/api/accounts");
-  accounts.value = await res.json();
-};
-
-const loadTags = async () => {
-  const res = await fetch("/api/tags");
-  tags.value = await res.json();
-};
-
-const loadPinned = async () => {
-  const res = await fetch("/api/pinned");
-  pinnedId_t.value = await res.json();
-};
-
+// Add transaction delta form  // TODO move to a separate component (and transition to PrimeVue)
 const selectedTransaction = ref(null);
 const clearSelection = () => {
   selectedTransaction.value = null;
@@ -77,121 +65,165 @@ watch(selectedTransaction, (newId) => {
   form.value.title = transaction.title;
 });
 
-const post = async (url, body) => {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body,
-  });
-  return await response.json();
-};
-
-// Transaction form
-const today = new Date().toISOString();
-const form = ref({
+const emptyForm = () => ({
   title: "",
   delta: {
-    ts: today,
+    ts: new Date(),
     subtitle: "",
     amount: null,
     id_a: null,
     tag: null,
   },
 });
+const form = ref(emptyForm());
+const resetForm = () => {
+  form.value = emptyForm();
+};
+
 const submitAddTransaction = async () => {
   const url = selectedTransaction.value
     ? "/api/transactions/existing"
     : "/api/transactions/new";
+  const delta = { ...form.value.delta, ts: form.value.delta.ts.toISOString() };
   const payload = JSON.stringify(
     selectedTransaction.value
       ? {
           id_t: selectedTransaction.value,
-          delta: form.value.delta,
+          delta,
         }
-      : form.value,
+      : { ...form.value, delta },
   );
-  const data = await post(url, payload); // TODO pop-up about success/fail
-  form.value.title = null;
-  form.value.delta.subtitle = null;
-  form.value.delta.amount = null;
-  form.value.delta.id_a = null;
-  form.value.delta.tag = null;
-  await loadTransactions();
-};
-
-// Tag form
-const newTag = ref({
-  tag_name: null,
-});
-const submitNewTag = async () => {
-  const url = "/api/add/tag";
-  const payload = JSON.stringify(newTag.value);
-  console.log(payload);
+  console.log(payload); // DEV
   const response = await post(url, payload);
   console.log(response); // DEV
   if (response.ok) {
     console.log("ok Toast"); // DEV
-    // TODO success message
-    newTag.value.tag_name = null;
-    await loadTags();
-  } else if (response.statue === 409) {
-    console.log("duplicate warning Toast"); // DEV
-    // TODO duplicate warning message
+    successToast("Transaction added");
+    resetForm();
+    await loadTransactions();
   } else {
     console.log("something went wrong Toast"); // DEV
-    // TODO error message
+    errorToast("Transaction could not be added");
   }
 };
 
-// Account form
+// Account form  // TODO move to a separate component (and transition to PrimeVue)
 const newAccount = ref({
   name: "",
   currency: "",
   balance: "",
+  ts: new Date(),
 });
 
 const submitNewAccount = async () => {
   const url = "/api/add/account"; // TODO implement
-  const body = JSON.stringify(newAccount.value);
-  const data = await post(url, payload); // TODO pop-up about success/fail
-  newAccount.name = null;
-  newAccount.currency = null;
-  newAccount.balance = null;
-  await loadAccounts();
+  const payload = JSON.stringify({
+    ...newAccount.value,
+    ts: newAccount.value.ts.toISOString(),
+  });
+  const response = await post(url, payload);
+  console.log(response); // DEV
+  if (response.ok) {
+    console.log("ok Toast"); // DEV
+    successToast(
+      `Account '${newTag.value.name} (${newAccount.value.currency})' added`,
+    );
+    newAccount.value.name = null;
+    newAccount.value.currency = null;
+    newAccount.value.balance = null;
+    await loadAccounts();
+  } else {
+    console.log("something went wrong Toast"); // DEV
+    errorToast("The account could not be added");
+  }
 };
 
 // Pinned transactions
 const isPinned = (id) => pinnedId_t.value.includes(id);
 const pinTransaction = async (id) => {
-  // TODO, decide if frontend or backend should check this condition
+  // TODO, decide if frontend or backend should check this condition (-> database with unique, and HTTPS error when duplicate (like duplicate tag creation))
   if (!pinnedId_t.value.includes(id)) {
     const url = "/api/transactions/pin";
-    const body = JSON.stringify({ id_t: id });
-    const data = await post(url, payload); // TODO pop-up about success/fail
-    await loadPinned();
+    const payload = JSON.stringify({ id_t: id });
+    const response = await post(url, payload);
+    console.log(response); // DEV
+    if (response.ok) {
+      console.log("ok Toast"); // DEV
+      neutralToast("Transaction pinned");
+      await loadPinned();
+    } else {
+      console.log("something went wrong Toast"); // DEV
+      errorToast("The transaction could not be pinned");
+    }
   }
 };
 
 const unpinTransaction = async (id) => {
   const url = "/api/transactions/unpin";
-  const body = JSON.stringify({ id_t: id });
-  const data = await post(url, payload); // TODO pop-up about success/fail
-  await loadPinned();
+  const payload = JSON.stringify({ id_t: id });
+  const response = await post(url, payload);
+  console.log(response); // DEV
+  if (response.ok) {
+    console.log("ok Toast"); // DEV
+    neutralToast("Transaction unpinned");
+    await loadPinned();
+  } else {
+    console.log("something went wrong Toast"); // DEV
+    errorToast("The transaction could not be unpinned");
+  }
 };
 
+// TODO move to a separate component
 // Sliding side-panels
-const showTagPanel = ref(false);
+const showTagAddPanel = ref(false);
 const showAccountPanel = ref(false);
 
-const panelTagInput = ref(null);
-const panelAccountNameInput = ref(null);
-
-const closePanels = () => {
-  // Not necessarily needed, as the pull-out tabs of other panels are hidden under any open panel.
-  // Kept for future-proofing and manual tempering with z-index
-  showTagPanel.value = false;
-  showAccountPanel.value = false;
-};
+// View specific menu items
+const setupItems = ref([
+  {
+    label: "Tags",
+    icon: "pi pi-tags",
+    items: [
+      {
+        label: "Add",
+        icon: "pi pi-plus",
+        command: async () => {
+          showTagAddPanel.value = true;
+        },
+      },
+      {
+        label: "Remove",
+        icon: "pi pi-minus",
+        command: () => {
+          // showTagDeletePanel.value = true;  // TODO
+        },
+      },
+    ],
+  },
+  {
+    separator: true,
+  },
+  {
+    label: "Accounts",
+    icon: "pi pi-wallet",
+    items: [
+      {
+        label: "Add",
+        icon: "pi pi-plus",
+        command: async () => {
+          showAccountPanel.value = true;
+        },
+      },
+      {
+        label: "Hide",
+        icon: "pi pi-eye-slash",
+        command: () => {
+          // showAccountHidePanel.value = true;  // TODO
+        },
+      },
+    ],
+  },
+]);
 
 onMounted(() => {
   loadTransactions();
@@ -203,6 +235,40 @@ onMounted(() => {
 
 <template>
   <div class="container">
+    <Teleport to="#secondary-menu-target">
+      <Menubar :model="setupItems" class="border-none bg-transparent" />
+    </Teleport>
+
+    <Drawer
+      v-model:visible="showTagAddPanel"
+      header="Add New Tags"
+      position="right"
+    >
+      <NewTag />
+    </Drawer>
+
+    <Drawer
+      v-model:visible="showAccountPanel"
+      header="Accounts"
+      position="right"
+    >
+      <input
+        v-model="newAccount.name"
+        ref="panelAccountNameInput"
+        placeholder="Name"
+      />
+      <input v-model="newAccount.currency" placeholder="Currency" />
+      <input v-model="newAccount.balance" placeholder="Balance" />
+      <DatePicker
+        v-model="newAccount.ts"
+        inline
+        showTime
+        hourFormat="24"
+        showButtonBar
+      />
+      <button @click="submitNewAccount">Add</button>
+    </Drawer>
+
     <div class="left">
       <h2>Pined Transactions</h2>
       <button @click="clearSelection">Clear selected transaction</button>
@@ -312,12 +378,12 @@ onMounted(() => {
         :disabled="selectedTransaction !== null"
       />
       <input v-model="form.delta.subtitle" placeholder="Description" />
-
-      <VueDatePicker
+      <DatePicker
         v-model="form.delta.ts"
         inline
-        :time-config="{ timePickerInline: true }"
-        auto-apply
+        showTime
+        showButtonBar
+        hourFormat="24"
       />
       <input v-model="form.delta.amount" placeholder="Amount" />
       <select v-model="form.delta.id_a">
@@ -338,54 +404,16 @@ onMounted(() => {
       </select>
       <button @click="submitAddTransaction">Submit</button>
     </div>
-
-    <SlidePanel
-      v-model="showTagPanel"
-      tabPosition="50px"
-      tabLabel="Add Tags"
-      @opening="closePanels"
-      @opened="panelTagInput?.focus()"
-    >
-      <h3>Add a tag</h3>
-      <input v-model="newTag.tag_name" ref="panelTagInput" placeholder="Tag" />
-      <button @click="submitNewTag">Add</button>
-    </SlidePanel>
-    <SlidePanel
-      v-model="showAccountPanel"
-      tabPosition="200px"
-      tabLabel="Add Accounts"
-      @opening="closePanels"
-      @opened="panelAccountNameInput?.focus()"
-    >
-      <h3>Add an account</h3>
-      <input
-        v-model="newAccount.name"
-        ref="panelAccountNameInput"
-        placeholder="Name"
-      />
-      <input v-model="newAccount.currency" placeholder="Currency" />
-      <input v-model="newAccount.balance" placeholder="Balance" />
-      <VueDatePicker
-        v-model="newAccount.date"
-        inline
-        :time-config="{ timePickerInline: true }"
-        auto-apply
-      />
-      <button @click="submitNewAccount">Add</button>
-    </SlidePanel>
   </div>
 </template>
 
-<style>
+<style scoped>
 .container {
   display: flex;
   gap: 40px;
   padding: 30px;
 }
 
-.vue3-datepicker {
-  width: 100%;
-}
 .left {
   flex: 1;
   background: #e2e2e2;
@@ -402,11 +430,11 @@ onMounted(() => {
   gap: 10px;
 }
 
-input,
+/* input,
 select,
 button {
   padding: 8px;
-}
+} */
 
 table {
   width: 100%;
