@@ -4,6 +4,7 @@ import { Form } from "@primevue/forms";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 import Message from "primevue/message";
+import IftaLabel from "primevue/iftalabel";
 import FocusTrap from "primevue/focustrap";
 // Custom
 import { customToaster } from "@/composables/customToast";
@@ -69,18 +70,21 @@ const onFormSubmit = async ({ valid, states, reset }) => {
       :initialValues
       :resolver
       @submit="onFormSubmit"
-      class="flex flex-col gap-4 w-full sm:w-56"
+      class="flex flex-col gap-4 w-full sm:w-80"
     >
       <div class="flex flex-col gap-1">
-        <label for="tag_name" class="font-semibold">Tag Name</label>
-        <InputText
-          name="tag_name"
-          type="text"
-          placeholder="e.g., Groceries"
-          fluid
-          autofocus
-          showClear
-        />
+        <IftaLabel>
+          <label for="tag_name" class="font-semibold">Tag Name</label>
+          <InputText
+            name="tag_name"
+            v-model="initialValues.tag_name"
+            type="text"
+            placeholder="e.g., Groceries"
+            fluid
+            autofocus
+            showClear
+          />
+        </IftaLabel>
         <Message
           v-if="$form.tag_name?.invalid"
           severity="secondary"

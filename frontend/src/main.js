@@ -29,6 +29,18 @@ const customAura = definePreset(Aura, {
       },
     },
   },
+  components: {
+    iftalabel: {
+      colorScheme: {
+        light: {
+          focusColor: "{neutral.700}",
+        },
+        dark: {
+          focusColor: "{neutral.50}",
+        },
+      },
+    },
+  },
 });
 
 app.use(PrimeVue, {

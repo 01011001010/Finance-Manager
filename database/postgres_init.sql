@@ -4,16 +4,19 @@ CREATE EXTENSION IF NOT EXISTS CITEXT;
 CREATE TABLE IF NOT EXISTS accounts (
     id_a SERIAL PRIMARY KEY,
     account TEXT NOT NULL,
-    currency CHAR(3) NOT NULL
+    currency CHAR(3) NOT NULL,
+    opening_balance NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    opened_ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_account_details UNIQUE (account, currency)
 );
-INSERT INTO accounts (account, currency)
+INSERT INTO accounts (account, currency, opening_balance)
 VALUES
-  ('Cash', 'EUR'),
-  ('Cash', 'CHF'),
-  ('Online bank', 'GBP'),
-  ('Online bank', 'CHF'),
-  ('Bank', 'CHF'),
-  ('Bank', 'EUR');
+  ('Cash', 'EUR', 50),
+  ('Cash', 'CHF', 150),
+  ('Online bank', 'GBP', 50),
+  ('Online bank', 'CHF', 500),
+  ('Bank', 'CHF', 100),
+  ('Bank', 'EUR', 200);
 
 
 

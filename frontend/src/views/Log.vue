@@ -1,12 +1,19 @@
 <!-- TODO
 transition to PrimeVue
 
+showClear not working for text fields
+
+iftalabel colour when selected
+
 tag and account management
 -> account addition
 -> account hiding
 -> tag hiding
 
 data validation on submit
+
+possibly allow during application setup to choose the default currency (new accounts) and other default choices anf formatting
+
 
 styling
 -> group if neighbouring are the same transaction??
@@ -22,6 +29,7 @@ import { customToaster } from "@/composables/customToast";
 import { dataLoaders, apiPost } from "@/composables/api";
 
 import NewTag from "@/components/NewTag.vue";
+import NewAccount from "../components/NewAccount.vue";
 
 // const vFocustrap = FocusTrap;
 
@@ -107,37 +115,6 @@ const submitAddTransaction = async () => {
   }
 };
 
-// Account form  // TODO move to a separate component (and transition to PrimeVue)
-const newAccount = ref({
-  name: "",
-  currency: "",
-  balance: "",
-  ts: new Date(),
-});
-
-const submitNewAccount = async () => {
-  const url = "/api/add/account"; // TODO implement
-  const payload = JSON.stringify({
-    ...newAccount.value,
-    ts: newAccount.value.ts.toISOString(),
-  });
-  const response = await post(url, payload);
-  console.log(response); // DEV
-  if (response.ok) {
-    console.log("ok Toast"); // DEV
-    successToast(
-      `Account '${newTag.value.name} (${newAccount.value.currency})' added`,
-    );
-    newAccount.value.name = null;
-    newAccount.value.currency = null;
-    newAccount.value.balance = null;
-    await loadAccounts();
-  } else {
-    console.log("something went wrong Toast"); // DEV
-    errorToast("The account could not be added");
-  }
-};
-
 // Pinned transactions
 const isPinned = (id) => pinnedId_t.value.includes(id);
 const pinTransaction = async (id) => {
@@ -173,7 +150,6 @@ const unpinTransaction = async (id) => {
   }
 };
 
-// TODO move to a separate component
 // Sliding side-panels
 const showTagAddPanel = ref(false);
 const showAccountPanel = ref(false);
@@ -241,32 +217,20 @@ onMounted(() => {
 
     <Drawer
       v-model:visible="showTagAddPanel"
-      header="Add New Tags"
+      header="Add Tags"
       position="right"
+      class="w-full sm:w-96"
     >
       <NewTag />
     </Drawer>
 
     <Drawer
       v-model:visible="showAccountPanel"
-      header="Accounts"
+      header="Add Accounts"
       position="right"
+      class="w-full sm:w-96"
     >
-      <input
-        v-model="newAccount.name"
-        ref="panelAccountNameInput"
-        placeholder="Name"
-      />
-      <input v-model="newAccount.currency" placeholder="Currency" />
-      <input v-model="newAccount.balance" placeholder="Balance" />
-      <DatePicker
-        v-model="newAccount.ts"
-        inline
-        showTime
-        hourFormat="24"
-        showButtonBar
-      />
-      <button @click="submitNewAccount">Add</button>
+      <NewAccount />
     </Drawer>
 
     <div class="left">
@@ -429,12 +393,6 @@ onMounted(() => {
   flex-direction: column;
   gap: 10px;
 }
-
-/* input,
-select,
-button {
-  padding: 8px;
-} */
 
 table {
   width: 100%;

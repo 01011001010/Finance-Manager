@@ -65,6 +65,13 @@ class PinId(BaseModel):
     id_t: int
 
 
+class AddingAccount(BaseModel):
+    ts: str  # ISO date from frontend
+    name: str
+    currency: str
+    balance: float
+
+
 app = FastAPI()
 
 
@@ -160,6 +167,33 @@ def pinTransaction(payload: PinId) -> dict[str, str]:
 @app.post("/transactions/unpin")
 def unpinTransaction(payload: PinId) -> dict[str, str]:
     return pinUnpin(payload, False)
+
+
+@app.post("/add/account")
+def addAccount(payload: AddingAccount) -> dict[str, str]:
+    # DEV
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""INSERT INTO accounts (account, currency, opened_ts,
+                                                     opening_balance)
+                               VALUES (%s, %s, %s, %s)
+                               RETURNING id_a;""",
+                            (payload.name, payload.currency, payload.ts,
+                             payload.balance))
+                (id_a,) = cur.fetchone() or (None,)
+
+                return {"status": "ok",
+                        "detail": (f"Account {payload.name} ({payload.currency}) added "
+                                   f"under id {id_a}")}
+    except dbErrors.UniqueViolation:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Account '{payload.name} ({payload.currency})' already exists."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
 @app.post("/add/tag")
