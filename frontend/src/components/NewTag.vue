@@ -6,20 +6,15 @@ import Button from "primevue/button";
 import Message from "primevue/message";
 import IftaLabel from "primevue/iftalabel";
 import FocusTrap from "primevue/focustrap";
-// Custom
+
+// Custom utils
 import { customToaster } from "@/composables/customToast";
 import { dataLoaders, apiPost } from "@/composables/api";
 
-// Focus Trap
+// Set-up
 const vFocustrap = FocusTrap;
-
-// Toast
 const { successToast, neutralToast, errorToast } = customToaster();
-
-// Data loading
 const { loadTags } = dataLoaders();
-
-// API POST
 const { post } = apiPost();
 
 // Values
@@ -38,7 +33,10 @@ const resolver = ({ values }) => {
 
 // Submit
 const onFormSubmit = async ({ valid, states, reset }) => {
-  if (!valid) return;
+  if (!valid) {
+    neutralToast("Check all fields to submit");
+    return;
+  }
 
   const url = "/api/add/tag";
   console.log(JSON.stringify(states)); //DEV

@@ -1,21 +1,12 @@
 <!-- TODO
-transition to PrimeVue
-
-showClear not working for text fields
-
-iftalabel colour when selected
-
 tag and account management
--> account addition
 -> account hiding
 -> tag hiding
-
-data validation on submit
 
 possibly allow during application setup to choose the default currency (new accounts) and other default choices anf formatting
 
 
-styling
+log list styling
 -> group if neighbouring are the same transaction??
 -> pinned transactions hide deltas into a rolldown (see PrimeVue Tree)
 -->
@@ -24,19 +15,20 @@ styling
 import { ref, onMounted, watch } from "vue";
 import Drawer from "primevue/drawer";
 import Menubar from "primevue/menubar";
-import DatePicker from "primevue/datepicker";
+import Fieldset from "primevue/fieldset";
+
+// Custom components
+import NewTag from "@/components/NewTag.vue";
+import NewAccount from "@/components/NewAccount.vue";
+import NewDelta from "../components/NewDelta.vue";
+
+// Custom utils
 import { customToaster } from "@/composables/customToast";
 import { dataLoaders, apiPost } from "@/composables/api";
+import { transactionSelector } from "@/composables/deltaLog";
 
-import NewTag from "@/components/NewTag.vue";
-import NewAccount from "../components/NewAccount.vue";
-
-// const vFocustrap = FocusTrap;
-
-// Toast
+// Set-up
 const { successToast, neutralToast, errorToast } = customToaster();
-
-// Data loading
 const {
   transactions,
   accounts,
@@ -48,74 +40,10 @@ const {
   loadTags,
   loadPinned,
 } = dataLoaders();
-
-// API POST
 const { post } = apiPost();
+const { clearSelection, selectedTransaction } = transactionSelector();
 
-// Add transaction delta form  // TODO move to a separate component (and transition to PrimeVue)
-const selectedTransaction = ref(null);
-const clearSelection = () => {
-  selectedTransaction.value = null;
-};
-
-let stashedTitle = null;
-watch(selectedTransaction, (newId) => {
-  if (newId === null) {
-    form.value.title = stashedTitle;
-    stashedTitle = null;
-    return;
-  }
-  if (stashedTitle === null) {
-    stashedTitle = form.value.title;
-  }
-  const transaction = transactions.value.find((t) => t.id === newId);
-  if (!transaction) return;
-  form.value.title = transaction.title;
-});
-
-const emptyForm = () => ({
-  title: "",
-  delta: {
-    ts: new Date(),
-    subtitle: "",
-    amount: null,
-    id_a: null,
-    tag: null,
-  },
-});
-const form = ref(emptyForm());
-const resetForm = () => {
-  form.value = emptyForm();
-};
-
-const submitAddTransaction = async () => {
-  const url = selectedTransaction.value
-    ? "/api/transactions/existing"
-    : "/api/transactions/new";
-  const delta = { ...form.value.delta, ts: form.value.delta.ts.toISOString() };
-  const payload = JSON.stringify(
-    selectedTransaction.value
-      ? {
-          id_t: selectedTransaction.value,
-          delta,
-        }
-      : { ...form.value, delta },
-  );
-  console.log(payload); // DEV
-  const response = await post(url, payload);
-  console.log(response); // DEV
-  if (response.ok) {
-    console.log("ok Toast"); // DEV
-    successToast("Transaction added");
-    resetForm();
-    await loadTransactions();
-  } else {
-    console.log("something went wrong Toast"); // DEV
-    errorToast("Transaction could not be added");
-  }
-};
-
-// Pinned transactions
+// Pinned transactions  // TODO separate with pinned-list components
 const isPinned = (id) => pinnedId_t.value.includes(id);
 const pinTransaction = async (id) => {
   // TODO, decide if frontend or backend should check this condition (-> database with unique, and HTTPS error when duplicate (like duplicate tag creation))
@@ -154,7 +82,7 @@ const unpinTransaction = async (id) => {
 const showTagAddPanel = ref(false);
 const showAccountPanel = ref(false);
 
-// View specific menu items
+// View-specific menu items // TODO separate with the menu
 const setupItems = ref([
   {
     label: "Tags",
@@ -210,7 +138,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="container">
+  <div class="w-full flex flex-row gap-4">
     <Teleport to="#secondary-menu-target">
       <Menubar :model="setupItems" class="border-none bg-transparent" />
     </Teleport>
@@ -233,167 +161,122 @@ onMounted(() => {
       <NewAccount />
     </Drawer>
 
-    <div class="left">
-      <h2>Pined Transactions</h2>
-      <button @click="clearSelection">Clear selected transaction</button>
-      <table>
-        <thead>
-          <tr>
-            <th>Select</th>
-            <th>Pin</th>
-            <th>Title</th>
-            <th>Subtitle</th>
-            <th>Amount</th>
-            <th>Account</th>
-            <th>Tag</th>
-            <th>Timestamp</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-for="t in pinnedTransactions" :key="t.id">
-            <tr v-for="(d, idx) in t.deltas" :key="d.id">
-              <td>
-                <input
-                  type="radio"
-                  name="t_select"
-                  :value="t.id"
-                  v-model="selectedTransaction"
-                />
-              </td>
-              <td>
-                <button
-                  @click="unpinTransaction(t.id)"
-                  title="Unpin transaction"
-                >
-                  ❌
-                </button>
-              </td>
-              <td>{{ t.title }}</td>
-              <td>{{ d.subtitle }}</td>
-              <td>{{ d.amount }}</td>
-              <td>{{ d.account }} ({{ d.currency }})</td>
-              <td>{{ d.tag }}</td>
-              <td>{{ d.ts }}</td>
+    <div class="w-full">
+      <Fieldset legend="Pined Transactions">
+        <button @click="clearSelection">Clear selected transaction</button>
+        <table>
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>Pin</th>
+              <th>Title</th>
+              <th>Subtitle</th>
+              <th>Amount</th>
+              <th>Account</th>
+              <th>Tag</th>
+              <th>Timestamp</th>
             </tr>
-          </template>
-        </tbody>
-      </table>
-
-      <h2>Existing Transactions</h2>
-      <button @click="clearSelection">Clear selected transaction</button>
-      <table>
-        <thead>
-          <tr>
-            <th>Select</th>
-            <th>Pin</th>
-            <th>Title</th>
-            <th>Subtitle</th>
-            <th>Amount</th>
-            <th>Account</th>
-            <th>Tag</th>
-            <th>Timestamp</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-for="t in transactions" :key="t.id">
-            <tr v-for="(d, idx) in t.deltas" :key="d.id">
-              <td>
-                <input
-                  type="radio"
-                  name="t_select"
-                  :value="t.id"
-                  v-model="selectedTransaction"
-                />
-              </td>
-              <td>
-                <button
-                  v-if="!isPinned(t.id)"
-                  @click="pinTransaction(t.id)"
-                  title="Pin transaction"
-                >
-                  📌
-                </button>
-
-                <button
-                  v-else
-                  @click="unpinTransaction(t.id)"
-                  title="Unpin transaction"
-                >
-                  ❌
-                </button>
-              </td>
-              <td>{{ t.title }}</td>
-              <td>{{ d.subtitle }}</td>
-              <td>{{ d.amount }}</td>
-              <td>{{ d.account }} ({{ d.currency }})</td>
-              <td>{{ d.tag }}</td>
-              <td>{{ d.ts }}</td>
+          </thead>
+          <tbody>
+            <template v-for="t in pinnedTransactions" :key="t.id">
+              <tr v-for="(d, idx) in t.deltas" :key="d.id">
+                <td>
+                  <input
+                    type="radio"
+                    name="t_select"
+                    :value="t.id"
+                    v-model="selectedTransaction"
+                  />
+                </td>
+                <td>
+                  <button
+                    @click="unpinTransaction(t.id)"
+                    title="Unpin transaction"
+                  >
+                    ❌
+                  </button>
+                </td>
+                <td>{{ t.title }}</td>
+                <td>{{ d.subtitle }}</td>
+                <td>{{ d.amount }}</td>
+                <td>{{ d.account }} ({{ d.currency }})</td>
+                <td>{{ d.tag }}</td>
+                <td>{{ d.ts }}</td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </Fieldset>
+      <Fieldset legend="Transaction deltas in chronological order">
+        <h2>Existing Transactions</h2>
+        <button @click="clearSelection">Clear selected transaction</button>
+        <table>
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>Pin</th>
+              <th>Title</th>
+              <th>Subtitle</th>
+              <th>Amount</th>
+              <th>Account</th>
+              <th>Tag</th>
+              <th>Timestamp</th>
             </tr>
-          </template>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <template v-for="t in transactions" :key="t.id">
+              <tr v-for="(d, idx) in t.deltas" :key="d.id">
+                <td>
+                  <input
+                    type="radio"
+                    name="t_select"
+                    :value="t.id"
+                    v-model="selectedTransaction"
+                  />
+                </td>
+                <td>
+                  <button
+                    v-if="!isPinned(t.id)"
+                    @click="pinTransaction(t.id)"
+                    title="Pin transaction"
+                  >
+                    📌
+                  </button>
+
+                  <button
+                    v-else
+                    @click="unpinTransaction(t.id)"
+                    title="Unpin transaction"
+                  >
+                    ❌
+                  </button>
+                </td>
+                <td>{{ t.title }}</td>
+                <td>{{ d.subtitle }}</td>
+                <td>{{ d.amount }}</td>
+                <td>{{ d.account }} ({{ d.currency }})</td>
+                <td>{{ d.tag }}</td>
+                <td>{{ d.ts }}</td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </Fieldset>
     </div>
 
-    <div class="right">
-      <h2>Add Transaction</h2>
-      <input
-        v-model="form.title"
-        placeholder="Name"
-        :disabled="selectedTransaction !== null"
-      />
-      <input v-model="form.delta.subtitle" placeholder="Description" />
-      <DatePicker
-        v-model="form.delta.ts"
-        inline
-        showTime
-        showButtonBar
-        hourFormat="24"
-      />
-      <input v-model="form.delta.amount" placeholder="Amount" />
-      <select v-model="form.delta.id_a">
-        <option :value="null" disabled selected>Account</option>
-        <option
-          v-for="account in accounts"
-          :key="account.id_a"
-          :value="account.id_a"
-        >
-          {{ account.account }} ({{ account.currency }})
-        </option>
-      </select>
-      <select v-model="form.delta.tag">
-        <option :value="null" disabled selected>Tag</option>
-        <option v-for="tag in tags" :key="tag.tag" :value="tag.tag">
-          {{ tag.tag_name }}
-        </option>
-      </select>
-      <button @click="submitAddTransaction">Submit</button>
+    <div class="w-full sm:w-96">
+      <Fieldset
+        :legend="
+          selectedTransaction ? 'Add to a Transaction' : 'New Transaction'
+        "
+      >
+        <NewDelta />
+      </Fieldset>
     </div>
   </div>
 </template>
 
 <style scoped>
-.container {
-  display: flex;
-  gap: 40px;
-  padding: 30px;
-}
-
-.left {
-  flex: 1;
-  background: #e2e2e2;
-  color: rgb(0, 0, 0);
-  padding: 20px;
-  overflow-y: auto;
-  max-height: 80vh;
-}
-
-.right {
-  width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;

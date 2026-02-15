@@ -83,7 +83,10 @@ const resolver = ({ values }) => {
 
 // Submit Handler
 const onFormSubmit = async ({ valid, states, reset }) => {
-  if (!valid) return;
+  if (!valid) {
+    neutralToast("Check all fields to submit");
+    return;
+  }
 
   const url = "/api/add/account";
 
