@@ -62,10 +62,11 @@ docker compose up -d --build
 
 ## Roadmap
 
-- [x] Foundational Architecture
+- [x] Foundational architecture
 - [x] Transaction logging
-- [ ] Account and tag management
 - [x] Pin transaction
+- [x] Transition to PrimeVue 4
+- [ ] Account and tag management
 - [ ] Transaction overview
     - [ ] Multi-day transactions
     - [ ] Account state tracking
