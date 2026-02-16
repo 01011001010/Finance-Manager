@@ -66,7 +66,7 @@ docker compose up -d --build
 - [x] Transaction logging
 - [x] Pin transaction
 - [x] Transition to PrimeVue 4
-- [ ] Account and tag management
+- [x] Account and tag management
 - [ ] Transaction overview
     - [ ] Multi-day transactions
     - [ ] Account state tracking
