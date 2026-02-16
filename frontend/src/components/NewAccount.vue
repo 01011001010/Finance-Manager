@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { Form } from "@primevue/forms";
 import IftaLabel from "primevue/iftalabel";
 import IconField from "primevue/iconfield";
@@ -23,12 +23,31 @@ const { loadAccounts } = dataLoaders();
 const { post } = apiPost();
 
 // Values
+// Note: It is not advised to use Form v-slot with v-model for the individual inputs.
+//       Unfortunately, the formatting of monetary or date inputs is not working without v-model at the moment.
+//       A hybrid approach was chosen for as the best option for now
 const initialValues = ref({
   name: "",
   currency: "CHF",
   balance: 0.0,
   ts: new Date(),
 });
+const formRef = ref(null);
+const clearField = (formName, refName, value = null) => {
+  initialValues.value[refName] = value;
+  if (formRef.value) {
+    // console.log(formRef.value)  // DEV
+    formRef.value.setFieldValue(formName, value);
+  }
+};
+const clearError = async (formObj) => {
+  if (formObj) {
+    await nextTick();
+    formObj.invalid = false;
+    formObj.error = null;
+    formObj.errors = [];
+  }
+};
 
 // Currencies
 const allCurrencies = Intl.supportedValuesOf("currency");
@@ -40,21 +59,22 @@ const filterCurrency = (e) => {
 
 // Autofocus on clear
 const nameInput = ref(null);
-const balanceInput = ref(null);
+// const balanceInput = ref(null);  // clear sets to 0.0 and does not put focus on the field
 const currencyInput = ref(null);
 
 const onBalanceFocus = (event) => {
   setTimeout(() => {
     if (event.target && typeof event.target.select === "function") {
-      event.target.select(); // Select contents on focus to prevent cursor starting at the end of existing value
+      // Select contents on focus to prevent cursor starting at the end of existing value
+      event.target.select();
     }
   }, 50);
 };
 
 // Resolver
 const resolver = ({ values }) => {
-  // console.log("RESOLVER");  // DEV
-  // console.log(values);  // DEV
+  console.log("RESOLVER"); // DEV
+  console.log(values); // DEV
   const errors = {};
 
   if (!values.name?.trim()) {
@@ -107,11 +127,20 @@ const onFormSubmit = async ({ valid, states, reset }) => {
   if (response.ok) {
     // console.log("ok Toast"); // DEV
     successToast(`Account '${payload.name} (${payload.currency})' added`);
-
+    await loadAccounts();
     initialValues.value.name = "";
     initialValues.value.balance = 0.0;
     reset();
-    await loadAccounts();
+    await nextTick();
+    if (nameInput.value) {
+      const inputRef =
+        nameInput.value.$el?.querySelector("input") ||
+        nameInput.value.$el ||
+        nameInput.value;
+      if (inputRef.focus === "function") {
+        inputRef.focus();
+      }
+    }
   } else if (response.status === 409) {
     // console.log("duplicate warning Toast"); // DEV
     neutralToast("An account with this name and currency already exists");
@@ -129,6 +158,9 @@ const onFormSubmit = async ({ valid, states, reset }) => {
       :initialValues
       :resolver
       @submit="onFormSubmit"
+      :validateOnValueUpdate="false"
+      :validateOnBlur="false"
+      :validateOnMount="false"
       class="flex flex-col gap-4 w-full sm:w-80"
     >
       <div class="flex flex-col gap-1">
@@ -140,10 +172,11 @@ const onFormSubmit = async ({ valid, states, reset }) => {
               inputId="date"
               fluid
               dateFormat="dd/mm/yy"
+              @date-select="clearError($form.ts)"
             />
             <InputIcon
               class="pi pi-calendar-times cursor-pointer"
-              @click="initialValues.ts = new Date()"
+              @click="clearField('ts', 'ts', new Date())"
             />
           </IconField>
           <label for="date" class="font-semibold">Opening Date</label>
@@ -168,12 +201,13 @@ const onFormSubmit = async ({ valid, states, reset }) => {
               placeholder="e.g., Cash"
               fluid
               autofocus
+              @input="clearError($form.name)"
             />
             <InputIcon
               v-if="initialValues.name"
               class="pi pi-times cursor-pointer"
               @click="
-                initialValues.name = '';
+                clearField('name', 'name');
                 nameInput.$el.focus();
               "
             />
@@ -200,8 +234,10 @@ const onFormSubmit = async ({ valid, states, reset }) => {
               :suggestions="filteredCurrencies"
               @keydown.enter.prevent
               @complete="filterCurrency"
+              @change="clearError($form.currency)"
               @input="
-                initialValues.currency = initialValues.currency.toUpperCase()
+                initialValues.currency = initialValues.currency.toUpperCase();
+                $form.currency.value = initialValues.currency;
               "
               placeholder="e.g., CHF"
               fluid
@@ -210,7 +246,7 @@ const onFormSubmit = async ({ valid, states, reset }) => {
               v-if="initialValues.currency"
               class="pi pi-times cursor-pointer"
               @click="
-                initialValues.currency = '';
+                clearField('currency', 'currency');
                 currencyInput.$el.querySelector('input').focus();
               "
             />
@@ -238,13 +274,18 @@ const onFormSubmit = async ({ valid, states, reset }) => {
               mode="currency"
               autocomplete="off"
               :currency="
-                initialValues.currency.length === 3
+                initialValues.currency?.length === 3
                   ? initialValues.currency
                   : 'CHF'
               "
               locale="en-CH"
               fluid
-              @input="(e) => (initialValues.balance = e.value)"
+              @input="
+                (e) => {
+                  initialValues.balance = e.value;
+                  clearError($form.balance);
+                }
+              "
               @focus="onBalanceFocus"
             />
             <InputIcon
@@ -252,10 +293,7 @@ const onFormSubmit = async ({ valid, states, reset }) => {
                 initialValues.balance !== 0.0 && initialValues.balance !== null
               "
               class="pi pi-times cursor-pointer"
-              @click="
-                initialValues.balance = null;
-                balanceInput.$el.querySelector('input').focus();
-              "
+              @click="clearField('balance', 'balance', 0.0)"
             />
           </IconField>
           <label for="balance" class="font-semibold">Initial Balance</label>

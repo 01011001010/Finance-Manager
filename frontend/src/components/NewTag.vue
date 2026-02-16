@@ -1,11 +1,13 @@
 <script setup>
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { Form } from "@primevue/forms";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 import Message from "primevue/message";
 import IftaLabel from "primevue/iftalabel";
 import FocusTrap from "primevue/focustrap";
+import IconField from "primevue/iconfield";
+import InputIcon from "primevue/inputicon";
 
 // Custom utils
 import { customToaster } from "@/composables/customToast";
@@ -21,6 +23,17 @@ const { post } = apiPost();
 const initialValues = ref({
   tag_name: "",
 });
+
+// Autofocus on clear
+const tagInput = ref(null);
+const clearError = async (formObj) => {
+  if (formObj) {
+    await nextTick();
+    formObj.invalid = false;
+    formObj.error = null;
+    formObj.errors = [];
+  }
+};
 
 // Resolver
 const resolver = ({ values }) => {
@@ -48,8 +61,18 @@ const onFormSubmit = async ({ valid, states, reset }) => {
   if (response.ok) {
     console.log("ok Toast"); // DEV
     successToast(`Tag '${states.tag_name.value}' added`);
-    reset();
     await loadTags();
+    reset();
+    await nextTick();
+    if (tagInput.value) {
+      const inputRef =
+        tagInput.value.$el?.querySelector("input") ||
+        tagInput.value.$el ||
+        tagInput.value;
+      if (inputRef.focus === "function") {
+        inputRef.focus();
+      }
+    }
   } else if (response.status === 409) {
     console.log("duplicate warning Toast"); // DEV
     neutralToast("Tag already exists");
@@ -72,16 +95,27 @@ const onFormSubmit = async ({ valid, states, reset }) => {
     >
       <div class="flex flex-col gap-1">
         <IftaLabel>
+          <IconField>
+            <InputText
+              name="tag_name"
+              type="text"
+              ref="tagInput"
+              placeholder="e.g., Groceries"
+              fluid
+              autofocus
+              showClear
+            />
+            <InputIcon
+              v-if="$form.tag_name?.value"
+              class="pi pi-times cursor-pointer"
+              @click="
+                $form.tag_name.value = '';
+                tagInput.$el.focus();
+                clearError($form.tag_name);
+              "
+            />
+          </IconField>
           <label for="tag_name" class="font-semibold">Tag Name</label>
-          <InputText
-            name="tag_name"
-            v-model="initialValues.tag_name"
-            type="text"
-            placeholder="e.g., Groceries"
-            fluid
-            autofocus
-            showClear
-          />
         </IftaLabel>
         <Message
           v-if="$form.tag_name?.invalid"

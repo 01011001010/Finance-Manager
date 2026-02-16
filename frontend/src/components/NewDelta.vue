@@ -25,6 +25,9 @@ const { post } = apiPost();
 const { selectedTransaction } = transactionSelector();
 
 // Values
+// Note: It is not advised to use Form v-slot with v-model for the individual inputs.
+//       Unfortunately, the formatting of monetary or date inputs is not working without v-model at the moment.
+//       A hybrid approach was chosen for as the best option for now
 const emptyForm = () => ({
   title: "",
   ts: new Date(),
