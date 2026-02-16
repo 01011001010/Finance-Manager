@@ -378,7 +378,16 @@ const onFormSubmit = async ({ valid, states, reset }) => {
               :optionLabel="getAccountLabel"
               dropdown
               fluid
-            />
+            >
+              <template #option="{ option }">
+                <div class="flex items-center gap-1">
+                  <span>{{ option.account }}</span>
+                  <span class="text-xs opacity-60"
+                    >({{ option.currency }})</span
+                  >
+                </div>
+              </template>
+            </AutoComplete>
             <InputIcon
               v-if="initialValues.accountObj"
               class="pi pi-times cursor-pointer absolute right-12 top-1/2 -translate-y-1/2"
