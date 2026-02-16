@@ -8,3 +8,7 @@
   @tailwind components;
   @tailwind utilities;
 }
+
+.p-scrollpanel-bar-y:hover {
+  background: var(--p-neutral-500) !important;
+}

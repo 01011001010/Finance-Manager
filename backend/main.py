@@ -72,6 +72,11 @@ class AddingAccount(BaseModel):
     balance: float
 
 
+class Archiving(BaseModel):
+    id: int
+    newArchivedState: bool
+
+
 app = FastAPI()
 
 
@@ -210,13 +215,37 @@ def addTag(payload: AddingTag) -> dict[str, str]:
                 return {"status": "ok",
                         "detail": f"Tag {payload.tag_name} added under id {tag}"}
     except dbErrors.UniqueViolation:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Tag '{payload.tag_name}' already exists."
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=f"Tag '{payload.tag_name}' already exists.")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=str(e))
+
+
+def archive(table: str, idCol: str, id: int, newArchivedState: bool, name: str):
+    message = 'archived' if newArchivedState else 'restored'
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"""UPDATE {table}
+                               SET archived = %s
+                               WHERE {idCol} = %s;""",
+                            (newArchivedState, id))
+                return {"status": "ok",
+                        "detail": f"{name} {id} {message}"}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
+
+
+@app.post("/archive/tag")
+def archiveTag(payload: Archiving) -> dict[str, str]:
+    return archive("tags", "tag", payload.id, payload.newArchivedState, "Tag")
+
+
+@app.post("/archive/account")
+def archiveAccount(payload: Archiving) -> dict[str, str]:
+    return archive("accounts", "id_a", payload.id, payload.newArchivedState, "Account")
 
 
 @app.get("/accounts")
@@ -226,14 +255,17 @@ def getAccounts() -> list[dict[str, Any]] | dict[str, str]:
             with conn.cursor() as cur:
                 cur.execute("""SELECT a.id_a,
                                       a.currency,
-                                      a.account
-                               FROM accounts a;""")
+                                      a.account,
+                                      a.archived
+                               FROM accounts a
+                               ORDER BY a.id_a ASC;""")
                 rows = cur.fetchall()
 
         return [{"id_a": id_a,
                  "currency": currency,  # TODO swap for €, $, ... ?
-                 "account": name}
-                for id_a, currency, name in rows]
+                 "account": name,
+                 "hidden": hidden}
+                for id_a, currency, name, hidden in rows]
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 
@@ -244,12 +276,15 @@ def getTags() -> list[dict[str, Any]] | dict[str, str]:
         with dbSession() as conn:
             with conn.cursor() as cur:
                 cur.execute("""SELECT t.tag,
-                                      t.tag_name
-                               FROM tags t;""")
+                                      t.tag_name,
+                                      t.archived
+                               FROM tags t
+                               ORDER BY t.tag ASC;""")
                 rows = cur.fetchall()
         return [{"tag": tag,
-                 "tag_name": name}
-                for tag, name in rows]
+                 "tag_name": name,
+                 "hidden": hidden}
+                for tag, name, hidden in rows]
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 

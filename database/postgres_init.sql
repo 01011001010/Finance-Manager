@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     currency CHAR(3) NOT NULL,
     opening_balance NUMERIC(10, 2) NOT NULL DEFAULT 0,
     opened_ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT unique_account_details UNIQUE (account, currency)
 );
 INSERT INTO accounts (account, currency, opening_balance)
@@ -47,7 +48,8 @@ VALUES
 
 CREATE TABLE IF NOT EXISTS tags (
     tag SERIAL PRIMARY KEY,
-    tag_name CITEXT UNIQUE NOT NULL
+    tag_name CITEXT UNIQUE NOT NULL,
+    archived BOOLEAN NOT NULL DEFAULT FALSE
 );
 INSERT INTO tags (tag_name)
 VALUES

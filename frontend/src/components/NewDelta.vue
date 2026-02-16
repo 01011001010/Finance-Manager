@@ -164,15 +164,15 @@ const resolver = ({ values }) => {
     values.amount === undefined ||
     values.amount === 0
   ) {
-    errors.amount = [{ message: "Amount is required" }];
+    errors.amount = [{ message: "A non-zero amount is required" }];
   }
 
-  if (!values.accountObj || !values.accountObj.id_a) {
-    errors.accountObj = [{ message: "Select an account" }];
-  } else if (typeof values.accountObj !== "object") {
+  if (typeof values.accountObj !== "object") {
     errors.accountObj = [
       { message: "Please select a valid account from the list" },
     ];
+  } else if (!values.accountObj || !values.accountObj.id_a) {
+    errors.accountObj = [{ message: "Select an account" }];
   }
 
   if (

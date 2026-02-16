@@ -12,15 +12,13 @@ log list styling
 -->
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
-import Drawer from "primevue/drawer";
-import Menubar from "primevue/menubar";
+import { onMounted } from "vue";
 import Fieldset from "primevue/fieldset";
+import Button from "primevue/button";
 
 // Custom components
-import NewTag from "@/components/NewTag.vue";
-import NewAccount from "@/components/NewAccount.vue";
-import NewDelta from "../components/NewDelta.vue";
+import NewDelta from "@/components/NewDelta.vue";
+import DrawerMenuLog from "@/components/DrawerMenuLog.vue";
 
 // Custom utils
 import { customToaster } from "@/composables/customToast";
@@ -31,8 +29,6 @@ import { transactionSelector } from "@/composables/deltaLog";
 const { successToast, neutralToast, errorToast } = customToaster();
 const {
   transactions,
-  accounts,
-  tags,
   pinnedId_t,
   pinnedTransactions,
   loadTransactions,
@@ -78,57 +74,6 @@ const unpinTransaction = async (id) => {
   }
 };
 
-// Sliding side-panels
-const showTagAddPanel = ref(false);
-const showAccountPanel = ref(false);
-
-// View-specific menu items // TODO separate with the menu
-const setupItems = ref([
-  {
-    label: "Tags",
-    icon: "pi pi-tags",
-    items: [
-      {
-        label: "Add",
-        icon: "pi pi-plus",
-        command: async () => {
-          showTagAddPanel.value = true;
-        },
-      },
-      {
-        label: "Remove",
-        icon: "pi pi-minus",
-        command: () => {
-          // showTagDeletePanel.value = true;  // TODO
-        },
-      },
-    ],
-  },
-  {
-    separator: true,
-  },
-  {
-    label: "Accounts",
-    icon: "pi pi-wallet",
-    items: [
-      {
-        label: "Add",
-        icon: "pi pi-plus",
-        command: async () => {
-          showAccountPanel.value = true;
-        },
-      },
-      {
-        label: "Hide",
-        icon: "pi pi-eye-slash",
-        command: () => {
-          // showAccountHidePanel.value = true;  // TODO
-        },
-      },
-    ],
-  },
-]);
-
 onMounted(() => {
   loadTransactions();
   loadAccounts();
@@ -139,30 +84,14 @@ onMounted(() => {
 
 <template>
   <div class="w-full flex flex-row gap-4">
-    <Teleport to="#secondary-menu-target">
-      <Menubar :model="setupItems" class="border-none bg-transparent" />
-    </Teleport>
-
-    <Drawer
-      v-model:visible="showTagAddPanel"
-      header="Add Tags"
-      position="right"
-      class="w-full sm:w-96"
-    >
-      <NewTag />
-    </Drawer>
-
-    <Drawer
-      v-model:visible="showAccountPanel"
-      header="Add Accounts"
-      position="right"
-      class="w-full sm:w-96"
-    >
-      <NewAccount />
-    </Drawer>
+    <DrawerMenuLog />
 
     <div class="w-full">
-      <Fieldset legend="Pined Transactions">
+      <Fieldset
+        legend="Pined Transactions"
+        :toggleable="true"
+        :collapsed="false"
+      >
         <button @click="clearSelection">Clear selected transaction</button>
         <table>
           <thead>
@@ -189,12 +118,14 @@ onMounted(() => {
                   />
                 </td>
                 <td>
-                  <button
+                  <Button
+                    icon="pi pi-times"
+                    severity="secondary"
+                    variant="text"
+                    rounded
+                    size="small"
                     @click="unpinTransaction(t.id)"
-                    title="Unpin transaction"
-                  >
-                    ❌
-                  </button>
+                  />
                 </td>
                 <td>{{ t.title }}</td>
                 <td>{{ d.subtitle }}</td>
@@ -207,7 +138,8 @@ onMounted(() => {
           </tbody>
         </table>
       </Fieldset>
-      <Fieldset legend="Transaction deltas in chronological order">
+
+      <Fieldset legend="Chronological log">
         <h2>Existing Transactions</h2>
         <button @click="clearSelection">Clear selected transaction</button>
         <table>
@@ -235,21 +167,25 @@ onMounted(() => {
                   />
                 </td>
                 <td>
-                  <button
+                  <Button
                     v-if="!isPinned(t.id)"
+                    icon="pi pi-thumbtack"
+                    severity="secondary"
+                    variant="text"
+                    rounded
+                    size="small"
                     @click="pinTransaction(t.id)"
-                    title="Pin transaction"
-                  >
-                    📌
-                  </button>
+                  />
 
-                  <button
+                  <Button
                     v-else
+                    icon="pi pi-times"
+                    severity="secondary"
+                    variant="text"
+                    rounded
+                    size="small"
                     @click="unpinTransaction(t.id)"
-                    title="Unpin transaction"
-                  >
-                    ❌
-                  </button>
+                  />
                 </td>
                 <td>{{ t.title }}</td>
                 <td>{{ d.subtitle }}</td>

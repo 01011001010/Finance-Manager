@@ -40,6 +40,20 @@ const customAura = definePreset(Aura, {
         },
       },
     },
+    scrollpanel: {
+      colorScheme: {
+        light: {
+          bar: {
+            background: "{neutral.400}",
+          },
+        },
+        dark: {
+          bar: {
+            background: "{neutral.300}",
+          },
+        },
+      },
+    },
   },
 });
 

@@ -2,13 +2,18 @@ import { ref, computed } from "vue";
 
 // Data loading
 const transactions = ref([]);
-const accounts = ref([]);
-const tags = ref([]);
+const accountsWithArchived = ref([]);
+const tagsWithArchived = ref([]);
 const pinnedId_t = ref([]);
 
 const pinnedTransactions = computed(() =>
   transactions.value.filter((t) => pinnedId_t.value.includes(t.id)),
 );
+
+const accounts = computed(() =>
+  accountsWithArchived.value.filter((a) => !a.hidden),
+);
+const tags = computed(() => tagsWithArchived.value.filter((t) => !t.hidden));
 
 export function dataLoaders() {
   const loadTransactions = async () => {
@@ -18,12 +23,12 @@ export function dataLoaders() {
 
   const loadAccounts = async () => {
     const res = await fetch("/api/accounts");
-    accounts.value = await res.json();
+    accountsWithArchived.value = await res.json();
   };
 
   const loadTags = async () => {
     const res = await fetch("/api/tags");
-    tags.value = await res.json();
+    tagsWithArchived.value = await res.json();
   };
 
   const loadPinned = async () => {
@@ -34,7 +39,9 @@ export function dataLoaders() {
   return {
     transactions,
     accounts,
+    accountsWithArchived,
     tags,
+    tagsWithArchived,
     pinnedId_t,
     pinnedTransactions,
     loadTransactions,
@@ -47,7 +54,7 @@ export function dataLoaders() {
 // API POST handler
 export function apiPost() {
   const post = async (url, payload) => {
-    console.log(`POST:${url}, payload:${payload}`); // DEV
+    // console.log(`POST:${url}, payload:${payload}`); // DEV
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
