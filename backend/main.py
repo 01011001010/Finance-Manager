@@ -223,7 +223,7 @@ def addTag(payload: AddingTag) -> dict[str, str]:
 
 
 def archive(table: str, idCol: str, id: int, newArchivedState: bool, name: str):
-    message = 'archived' if newArchivedState else 'restored'
+    message = "archived" if newArchivedState else "restored"
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
@@ -373,15 +373,15 @@ def getDeltaLog():
 
         transactions = []
         for id_t, title, subtitle, tag, id_d, amount, curr, account, ts, ts_log in rows:
-            if not len(transactions) or id_t != transactions[-1]:
-                transactions.append({"id": id_t,
+            if not len(transactions) or id_t != transactions[-1]["id_t"]:
+                transactions.append({"id_t": id_t,
                                      "title": title,
                                      "deltas": []})
 
-            transactions[-1]["deltas"].append({"id": id_d,
+            transactions[-1]["deltas"].append({"id_d": id_d,
                                                "subtitle": subtitle,
-                                               "amount": str(amount),  # TODO float ?
-                                               "currency": curr,  # TODO swap € ?
+                                               "amount": amount,
+                                               "currency": curr,
                                                "account": account,
                                                "tag": tag,
                                                "ts": ts.isoformat() if ts else None,

@@ -1,3 +1,4 @@
+// TODO unify toast type use, improve design
 import { useToast } from "primevue/usetoast";
 
 export function customToaster() {

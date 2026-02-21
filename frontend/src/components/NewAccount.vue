@@ -14,12 +14,12 @@ import FocusTrap from "primevue/focustrap";
 
 // Custom utils
 import { customToaster } from "@/composables/customToast";
-import { dataLoaders, apiPost } from "@/composables/api";
+import { getData, apiPost } from "@/composables/api";
 
 // Set-up
 const vFocustrap = FocusTrap;
 const { successToast, neutralToast, errorToast } = customToaster();
-const { loadAccounts } = dataLoaders();
+const { loadAccounts } = getData();
 const { post } = apiPost();
 
 // Values

@@ -18,7 +18,7 @@ const menuItems = ref([
 </script>
 
 <template>
-  <div class="card">
+  <div class="w-full h-screen">
     <Menubar :model="menuItems">
       <template #start>
         <div class="flex items-center gap-2 mr-4">
@@ -51,7 +51,7 @@ const menuItems = ref([
       </template>
     </Menubar>
 
-    <div class="p-4">
+    <div class="p-4 h-full">
       <Toast position="bottom-left" />
       <router-view />
     </div>

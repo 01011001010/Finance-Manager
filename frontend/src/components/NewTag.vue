@@ -1,3 +1,7 @@
+<!-- TODO hierarchical tags (max one nested level)
+          - change DB infor about who nests under who (creation table accordingly) and then display (new transaction and tag hiding)
+-->
+
 <script setup>
 import { ref, nextTick } from "vue";
 import { Form } from "@primevue/forms";
@@ -11,12 +15,12 @@ import InputIcon from "primevue/inputicon";
 
 // Custom utils
 import { customToaster } from "@/composables/customToast";
-import { dataLoaders, apiPost } from "@/composables/api";
+import { getData, apiPost } from "@/composables/api";
 
 // Set-up
 const vFocustrap = FocusTrap;
 const { successToast, neutralToast, errorToast } = customToaster();
-const { loadTags } = dataLoaders();
+const { loadTags } = getData();
 const { post } = apiPost();
 
 // Values

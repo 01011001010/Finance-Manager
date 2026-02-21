@@ -1,11 +1,12 @@
 <script setup>
-import HideList from "./HideList.vue";
+// Custom components
+import HideList from "@/components/HideList.vue";
 
 // Custom utils
-import { dataLoaders } from "@/composables/api";
+import { getData } from "@/composables/api";
 
 // Set-up
-const { tagsWithArchived, loadTags } = dataLoaders();
+const { tagsWithArchived, loadTags } = getData();
 </script>
 
 <template>

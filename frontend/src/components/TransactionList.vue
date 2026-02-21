@@ -1,0 +1,279 @@
+<!-- TODO transition to DataTable
+          - rows with TITLE, SUBTITLE, AMOUNT, ACCOUNT, TAG, DATETIME, PIN/EDIT/DELETE buttons (not particularly in this order)
+          - freeze row on select? -> unselect might be hard in a long list
+          - see SORT, SCROLL, FILTER, EDIT, VIRTUAL SCROLL, LAZY LOADING
+
+          Deltas sub-tables
+          - left padding
+          - sorting? (think how without headers)
+
+          ...
+-->
+
+<script setup>
+import { ref, watch } from "vue";
+import Button from "primevue/button";
+import DataTable from "primevue/datatable";
+import Column from "primevue/column";
+
+// Custom utils
+import { getData } from "@/composables/api";
+import { pinUtils } from "@/composables/pin";
+import { customToaster } from "@/composables/customToast";
+
+const props = defineProps({
+  pinned: { type: Boolean, required: true },
+  autoExpand: { type: Boolean, required: true },
+});
+
+// Set-up
+const { transactions, pinnedTransactions, selectedTransaction } = getData();
+const { isPinned, togglePin } = pinUtils();
+const { successToast, neutralToast, errorToast } = customToaster();
+
+const expandedRows = ref({});
+const items = props.pinned ? pinnedTransactions : transactions;
+
+// Data formatting
+const formatCurrency = (delta) => {
+  return delta.amount.toLocaleString("en-CH", {
+    style: "currency",
+    currency: delta.currency,
+  });
+};
+const formatDate = (value) => {
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat("en-CH", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+};
+
+// Row expansion and selection // TODO
+const onRowSelect = (event) => {
+  neutralToast("Row Selected");
+  console.log("Row Selected");
+  console.log(event.data);
+};
+const onRowUnselect = (event) => {
+  neutralToast("Row Unselected");
+  console.log("Row Unselected");
+  console.log(event.data);
+};
+const onRowExpand = (event) => {
+  neutralToast("Row Expanded");
+  console.log("Row Expanded");
+  console.log(event.data);
+};
+const onRowCollapse = (event) => {
+  neutralToast("Row Collapsed");
+  console.log("Row Collapsed");
+  console.log(event.data);
+};
+const expandAll = () => {
+  expandedRows.value = items.value.reduce(
+    (acc, t) => (acc[t.id_t] = true) && acc,
+    {},
+  );
+};
+const collapseAll = () => {
+  expandedRows.value = null;
+};
+
+// Utilities // TODO
+const confirmDeleteTransaction = (transaction) => {
+  console.log("TODO Trans. del. dialog");
+  console.log(transaction);
+  errorToast("Not implemented yet, sorry");
+};
+const editTransaction = (transaction) => {
+  console.log("TODO Trans. edit");
+  console.log(transaction);
+  errorToast("Not implemented yet, sorry");
+};
+const confirmDeleteDelta = (delta) => {
+  console.log("TODO Delta. del. dialog");
+  console.log(delta);
+  errorToast("Not implemented yet, sorry");
+};
+const editDelta = (delta) => {
+  console.log("TODO Delta. edit");
+  console.log(delta);
+  errorToast("Not implemented yet, sorry");
+};
+
+// Expand rows when data loaded
+const unwatch = watch(
+  () => items.value,
+  (newData) => {
+    if (props.autoExpand && newData?.length > 0) {
+      expandAll();
+    }
+  },
+  { immediate: true },
+);
+if (!props.autoExpand) {
+  unwatch();
+}
+</script>
+
+<template>
+  <DataTable
+    :value="items"
+    v-model:expandedRows="expandedRows"
+    v-model:selection="selectedTransaction"
+    selectionMode="single"
+    :metaKeySelection="false"
+    dataKey="id_t"
+    scrollable
+    scrollHeight="flex"
+    :showHeaders="false"
+    @rowExpand="onRowExpand"
+    @rowCollapse="onRowCollapse"
+    @rowSelect="onRowSelect"
+    @rowUnselect="onRowUnselect"
+    tableStyle="min-width: 50rem"
+    size="small"
+    :pt="{
+      rowExpansionCell: { class: 'p-0' },
+      bodyrow: ({ context }) => ({
+        class: [
+          { 'bg-[var(--p-surface-50)]': !context.selected },
+          { 'hover:!bg-[var(--p-surface-200)]': !context.selected },
+        ],
+      }),
+    }"
+    ><template v-if="!autoExpand" #header>
+      <div class="flex gap-2">
+        <Button
+          variant="text"
+          size="small"
+          icon="pi pi-plus"
+          label="Expand All"
+          @click="expandAll"
+        />
+        <Button
+          variant="text"
+          size="small"
+          icon="pi pi-minus"
+          label="Collapse All"
+          @click="collapseAll"
+        />
+      </div>
+    </template>
+    <Column v-if="!autoExpand" expander class="w-8" />
+    <Column field="title"></Column>
+    <Column :exportable="false" class="w-64">
+      <template #body="slotProps">
+        <div class="flex justify-end">
+          <Button
+            variant="text"
+            rounded
+            size="small"
+            severity="secondary"
+            class="group"
+            @click="togglePin(slotProps.data.id_t)"
+          >
+            <template #icon>
+              <div
+                class="relative w-full h-full flex items-center justify-center"
+              >
+                <i
+                  class="group-hover:opacity-0 transition-opacity duration-200"
+                  :class="
+                    isPinned(slotProps.data.id_t)
+                      ? 'pi pi-bookmark-fill'
+                      : 'pi pi-bookmark'
+                  "
+                ></i>
+                <i
+                  class="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  :class="
+                    isPinned(slotProps.data.id_t)
+                      ? 'pi pi-bookmark'
+                      : 'pi pi-bookmark-fill'
+                  "
+                ></i>
+              </div>
+            </template>
+          </Button>
+          <Button
+            variant="text"
+            rounded
+            size="small"
+            icon="pi pi-pencil"
+            severity="secondary"
+            @click="editTransaction(slotProps.data)"
+          />
+          <Button
+            variant="text"
+            rounded
+            size="small"
+            icon="pi pi-trash"
+            severity="danger"
+            @click="confirmDeleteTransaction(slotProps.data)"
+          />
+        </div>
+      </template>
+    </Column>
+
+    <template #expansion="slotProps">
+      <div>
+        <DataTable
+          :value="slotProps.data.deltas"
+          :showHeaders="false"
+          class="w-full"
+          size="small"
+          :pt="{
+            tbody: {
+              class: '[&>tr:last-child>td]:border-b-0',
+            },
+            bodyrow: {
+              class: 'hover:!bg-[var(--p-datatable-row-background)]',
+            },
+          }"
+        >
+          <Column field="subtitle" class="w-1/6 pl-8"></Column>
+          <Column field="tag" class="w-1/6"></Column>
+          <Column field="account" class="w-1/8"></Column>
+          <Column field="amount" class="w-1/6 text-right pr-8">
+            <template #body="slotProps">
+              {{ formatCurrency(slotProps.data) }}
+            </template>
+          </Column>
+          <Column field="ts" class="w-1/5">
+            <template #body="slotProps">
+              {{ formatDate(slotProps.data.ts) }}
+            </template>
+          </Column>
+          <Column :exportable="false" class="w-28">
+            <template #body="slotProps">
+              <div class="flex justify-end">
+                <Button
+                  variant="text"
+                  rounded
+                  size="small"
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  @click="editDelta(slotProps.data)"
+                />
+                <Button
+                  variant="text"
+                  rounded
+                  size="small"
+                  icon="pi pi-trash"
+                  severity="danger"
+                  @click="confirmDeleteDelta(slotProps.data)"
+                />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </div>
+    </template>
+  </DataTable>
+</template>

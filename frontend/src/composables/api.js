@@ -1,13 +1,14 @@
 import { ref, computed } from "vue";
 
-// Data loading
+// Data refs
 const transactions = ref([]);
 const accountsWithArchived = ref([]);
 const tagsWithArchived = ref([]);
 const pinnedId_t = ref([]);
+const selectedTransaction = ref(null);
 
 const pinnedTransactions = computed(() =>
-  transactions.value.filter((t) => pinnedId_t.value.includes(t.id)),
+  transactions.value.filter((t) => pinnedId_t.value.includes(t.id_t)),
 );
 
 const accounts = computed(() =>
@@ -15,7 +16,7 @@ const accounts = computed(() =>
 );
 const tags = computed(() => tagsWithArchived.value.filter((t) => !t.hidden));
 
-export function dataLoaders() {
+export function getData() {
   const loadTransactions = async () => {
     const res = await fetch("/api/deltaLog");
     transactions.value = await res.json();
@@ -44,6 +45,7 @@ export function dataLoaders() {
     tagsWithArchived,
     pinnedId_t,
     pinnedTransactions,
+    selectedTransaction,
     loadTransactions,
     loadAccounts,
     loadTags,

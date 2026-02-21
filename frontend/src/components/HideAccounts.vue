@@ -2,10 +2,10 @@
 import HideList from "./HideList.vue";
 
 // Custom utils
-import { dataLoaders } from "@/composables/api";
+import { getData } from "@/composables/api";
 
 // Set-up
-const { accountsWithArchived, loadAccounts } = dataLoaders();
+const { accountsWithArchived, loadAccounts } = getData();
 </script>
 
 <template>

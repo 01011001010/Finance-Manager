@@ -11,18 +11,17 @@ import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Message from "primevue/message";
 import FocusTrap from "primevue/focustrap";
+import Fieldset from "primevue/fieldset";
 
 // Custom utils
 import { customToaster } from "@/composables/customToast";
-import { dataLoaders, apiPost } from "@/composables/api";
-import { transactionSelector } from "@/composables/deltaLog";
+import { getData, apiPost } from "@/composables/api";
 
 // Set-up
 const vFocustrap = FocusTrap;
 const { successToast, neutralToast, errorToast } = customToaster();
-const { accounts, tags, transactions, loadTransactions } = dataLoaders();
+const { accounts, tags, loadTransactions, selectedTransaction } = getData();
 const { post } = apiPost();
-const { selectedTransaction } = transactionSelector();
 
 // Values
 // Note: It is not advised to use Form v-slot with v-model for the individual inputs.
@@ -60,8 +59,8 @@ const clearError = async (formObj) => {
 
 // Transaction selection
 let stashedTitle = null;
-watch(selectedTransaction, async (newId) => {
-  if (newId === null) {
+watch(selectedTransaction, async (newTransaction) => {
+  if (newTransaction === null) {
     initialValues.value.title = stashedTitle;
     stashedTitle = null;
     return;
@@ -69,9 +68,9 @@ watch(selectedTransaction, async (newId) => {
   if (stashedTitle === null) {
     stashedTitle = initialValues.value.title;
   }
-  const transaction = transactions.value.find((t) => t.id === newId);
-  if (!transaction) return;
-  initialValues.value.title = transaction.title;
+  // const transaction = transactions.value.find((t) => t.id === newId);
+  // if (!transaction) return;
+  initialValues.value.title = newTransaction.title;
 
   if (formRef.value) {
     if (formRef.value.states.title) {
@@ -213,7 +212,7 @@ const onFormSubmit = async ({ valid, states, reset }) => {
   const payload = JSON.stringify(
     selectedTransaction.value
       ? {
-          id_t: selectedTransaction.value,
+          id_t: selectedTransaction.value.id_t,
           delta: delta,
         }
       : {
@@ -239,244 +238,249 @@ const onFormSubmit = async ({ valid, states, reset }) => {
 </script>
 
 <template>
-  <div v-focustrap class="card flex justify-center">
-    <Form
-      v-slot="$form"
-      :initialValues
-      :resolver
-      :validateOnValueUpdate="false"
-      :validateOnBlur="false"
-      :validateOnMount="false"
-      ref="formRef"
-      @submit="onFormSubmit"
-      class="flex flex-col gap-4 w-full sm:w-80"
-    >
-      <div class="flex flex-col gap-1">
-        <IftaLabel>
-          <IconField>
-            <InputText
-              name="title"
-              ref="titleInput"
-              id="titleID"
-              v-model="initialValues.title"
-              placeholder="e.g., Rent"
-              fluid
-              :disabled="selectedTransaction !== null"
-              @input="clearError($form.title)"
-              autofocus
-            />
-            <InputIcon
-              v-if="initialValues.title && selectedTransaction === null"
-              class="pi pi-times cursor-pointer"
-              @click="
-                clearField('title', 'title', '');
-                titleInput.$el.focus();
-              "
-            />
-          </IconField>
-          <label for="titleID" class="font-semibold">Transaction title</label>
-        </IftaLabel>
-        <Message
-          v-if="$form.title?.invalid && !$form.title?.focused"
-          severity="secondary"
-          size="small"
-          variant="simple"
-        >
-          {{ $form.title.error?.message }}
-        </Message>
-      </div>
+  <Fieldset
+    :legend="selectedTransaction ? 'Add to a Transaction' : 'New Transaction'"
+  >
+    <div v-focustrap class="card flex justify-center">
+      <Form
+        v-slot="$form"
+        :initialValues
+        :resolver
+        :validateOnValueUpdate="false"
+        :validateOnBlur="false"
+        :validateOnMount="false"
+        ref="formRef"
+        @submit="onFormSubmit"
+        class="flex flex-col gap-4 w-full sm:w-80"
+      >
+        <div class="flex flex-col gap-1">
+          <IftaLabel>
+            <IconField>
+              <InputText
+                name="title"
+                ref="titleInput"
+                id="titleID"
+                v-model="initialValues.title"
+                placeholder="e.g., Rent"
+                fluid
+                :disabled="selectedTransaction !== null"
+                @input="clearError($form.title)"
+                autofocus
+              />
+              <InputIcon
+                v-if="initialValues.title && selectedTransaction === null"
+                class="pi pi-times cursor-pointer"
+                @click="
+                  clearField('title', 'title', '');
+                  titleInput.$el.focus();
+                "
+              />
+            </IconField>
+            <label for="titleID" class="font-semibold">Transaction title</label>
+          </IftaLabel>
+          <Message
+            v-if="$form.title?.invalid && !$form.title?.focused"
+            severity="secondary"
+            size="small"
+            variant="simple"
+          >
+            {{ $form.title.error?.message }}
+          </Message>
+        </div>
 
-      <div class="flex flex-col gap-1">
-        <IftaLabel>
-          <IconField>
-            <InputText
-              name="subtitle"
-              ref="subtitleInput"
-              id="subtitleID"
-              v-model="initialValues.subtitle"
-              placeholder="e.g., January"
-              fluid
-              @input="clearError($form.subtitle)"
-            />
-            <InputIcon
-              v-if="initialValues.subtitle"
-              class="pi pi-times cursor-pointer"
-              @click="
-                clearField('subtitle', 'subtitle', '');
-                subtitleInput.$el.focus();
-              "
-            />
-          </IconField>
-          <label for="subtitleID" class="font-semibold">Subtitle</label>
-        </IftaLabel>
-        <Message
-          v-if="$form.subtitle?.invalid && !$form.subtitle?.focused"
-          severity="secondary"
-          size="small"
-          variant="simple"
-        >
-          {{ $form.subtitle.error?.message }}
-        </Message>
-      </div>
+        <div class="flex flex-col gap-1">
+          <IftaLabel>
+            <IconField>
+              <InputText
+                name="subtitle"
+                ref="subtitleInput"
+                id="subtitleID"
+                v-model="initialValues.subtitle"
+                placeholder="e.g., January"
+                fluid
+                @input="clearError($form.subtitle)"
+              />
+              <InputIcon
+                v-if="initialValues.subtitle"
+                class="pi pi-times cursor-pointer"
+                @click="
+                  clearField('subtitle', 'subtitle', '');
+                  subtitleInput.$el.focus();
+                "
+              />
+            </IconField>
+            <label for="subtitleID" class="font-semibold">Subtitle</label>
+          </IftaLabel>
+          <Message
+            v-if="$form.subtitle?.invalid && !$form.subtitle?.focused"
+            severity="secondary"
+            size="small"
+            variant="simple"
+          >
+            {{ $form.subtitle.error?.message }}
+          </Message>
+        </div>
 
-      <div class="flex flex-col gap-1">
-        <IftaLabel>
-          <IconField>
-            <InputNumber
-              name="amount"
-              inputId="amount"
-              ref="amountInput"
-              v-model="initialValues.amount"
-              mode="currency"
-              autocomplete="off"
-              :currency="initialValues.accountObj?.currency || 'CHF'"
-              locale="en-CH"
-              fluid
-              @input="
-                (e) => {
-                  initialValues.amount = e.value;
-                  clearError($form.amount);
-                }
-              "
-              @focus="onBalanceFocus"
-            />
-            <InputIcon
-              v-if="
-                initialValues.amount !== 0.0 && initialValues.amount !== null
-              "
-              class="pi pi-times cursor-pointer"
-              @click="
-                clearField('amount', 'amount');
-                amountInput.$el.querySelector('input').focus();
-              "
-            />
-          </IconField>
-          <label for="balance" class="font-semibold">Amount</label>
-        </IftaLabel>
-        <Message
-          v-if="$form.amount?.invalid && !$form.amount?.focused"
-          severity="secondary"
-          size="small"
-          variant="simple"
-        >
-          {{ $form.amount.error?.message }}
-        </Message>
-      </div>
+        <div class="flex flex-col gap-1">
+          <IftaLabel>
+            <IconField>
+              <InputNumber
+                name="amount"
+                inputId="amount"
+                ref="amountInput"
+                v-model="initialValues.amount"
+                mode="currency"
+                autocomplete="off"
+                :currency="initialValues.accountObj?.currency || 'CHF'"
+                locale="en-CH"
+                fluid
+                @input="
+                  (e) => {
+                    initialValues.amount = e.value;
+                    clearError($form.amount);
+                  }
+                "
+                @focus="onBalanceFocus"
+              />
+              <InputIcon
+                v-if="
+                  initialValues.amount !== 0.0 && initialValues.amount !== null
+                "
+                class="pi pi-times cursor-pointer"
+                @click="
+                  clearField('amount', 'amount');
+                  amountInput.$el.querySelector('input').focus();
+                "
+              />
+            </IconField>
+            <label for="balance" class="font-semibold">Amount</label>
+          </IftaLabel>
+          <Message
+            v-if="$form.amount?.invalid && !$form.amount?.focused"
+            severity="secondary"
+            size="small"
+            variant="simple"
+          >
+            {{ $form.amount.error?.message }}
+          </Message>
+        </div>
 
-      <div class="flex flex-col gap-1">
-        <IftaLabel>
-          <IconField>
-            <AutoComplete
-              inputId="account"
-              name="accountObj"
-              ref="accountInput"
-              v-model="initialValues.accountObj"
-              :suggestions="filteredAccounts"
-              @keydown.enter.prevent
-              @complete="filterAccounts"
-              @change="clearError($form.accountObj)"
-              :optionLabel="getAccountLabel"
-              dropdown
-              fluid
-            >
-              <template #option="{ option }">
-                <div class="flex items-center gap-1">
-                  <span>{{ option.account }}</span>
-                  <span class="text-xs opacity-60"
-                    >({{ option.currency }})</span
-                  >
-                </div>
-              </template>
-            </AutoComplete>
-            <InputIcon
-              v-if="initialValues.accountObj"
-              class="pi pi-times cursor-pointer absolute right-12 top-1/2 -translate-y-1/2"
-              @click="
-                clearField('accountObj', 'accountObj');
-                accountInput.$el.querySelector('input').focus();
-              "
-            />
-          </IconField>
-          <label for="account" class="font-semibold">Account</label>
-        </IftaLabel>
-        <Message
-          v-if="$form.accountObj?.invalid && !$form.accountObj?.focused"
-          severity="secondary"
-          size="small"
-          variant="simple"
-        >
-          {{ $form.accountObj.error?.message }}
-        </Message>
-      </div>
+        <div class="flex flex-col gap-1">
+          <IftaLabel>
+            <IconField>
+              <AutoComplete
+                inputId="account"
+                name="accountObj"
+                ref="accountInput"
+                v-model="initialValues.accountObj"
+                :suggestions="filteredAccounts"
+                @keydown.enter.prevent
+                @complete="filterAccounts"
+                @change="clearError($form.accountObj)"
+                :optionLabel="getAccountLabel"
+                dropdown
+                fluid
+              >
+                <template #option="{ option }">
+                  <div class="flex items-center gap-1">
+                    <span>{{ option.account }}</span>
+                    <span class="text-xs opacity-60"
+                      >({{ option.currency }})</span
+                    >
+                  </div>
+                </template>
+              </AutoComplete>
+              <InputIcon
+                v-if="initialValues.accountObj"
+                class="pi pi-times cursor-pointer absolute right-12 top-1/2 -translate-y-1/2"
+                @click="
+                  clearField('accountObj', 'accountObj');
+                  accountInput.$el.querySelector('input').focus();
+                "
+              />
+            </IconField>
+            <label for="account" class="font-semibold">Account</label>
+          </IftaLabel>
+          <Message
+            v-if="$form.accountObj?.invalid && !$form.accountObj?.focused"
+            severity="secondary"
+            size="small"
+            variant="simple"
+          >
+            {{ $form.accountObj.error?.message }}
+          </Message>
+        </div>
 
-      <div class="flex flex-col gap-1">
-        <IftaLabel>
-          <IconField>
-            <AutoComplete
-              inputId="tag"
-              name="tagObj"
-              ref="tagInput"
-              v-model="initialValues.tagObj"
-              :suggestions="filteredTags"
-              @keydown.enter.prevent
-              @complete="filterTags"
-              @change="clearError($form.tagObj)"
-              :optionLabel="getTagLabel"
-              dropdown
-              fluid
-            />
-            <InputIcon
-              v-if="initialValues.tagObj"
-              class="pi pi-times cursor-pointer absolute right-12 top-1/2 -translate-y-1/2"
-              @click="
-                clearField('tagObj', 'tagObj');
-                tagInput.$el.querySelector('input').focus();
-              "
-            />
-          </IconField>
-          <label for="tag" class="font-semibold">Tag</label>
-        </IftaLabel>
-        <Message
-          v-if="$form.tagObj?.invalid && !$form.tagObj?.focused"
-          severity="secondary"
-          size="small"
-          variant="simple"
-        >
-          {{ $form.tagObj.error?.message }}
-        </Message>
-      </div>
+        <div class="flex flex-col gap-1">
+          <IftaLabel>
+            <IconField>
+              <AutoComplete
+                inputId="tag"
+                name="tagObj"
+                ref="tagInput"
+                v-model="initialValues.tagObj"
+                :suggestions="filteredTags"
+                @keydown.enter.prevent
+                @complete="filterTags"
+                @change="clearError($form.tagObj)"
+                :optionLabel="getTagLabel"
+                dropdown
+                fluid
+              />
+              <InputIcon
+                v-if="initialValues.tagObj"
+                class="pi pi-times cursor-pointer absolute right-12 top-1/2 -translate-y-1/2"
+                @click="
+                  clearField('tagObj', 'tagObj');
+                  tagInput.$el.querySelector('input').focus();
+                "
+              />
+            </IconField>
+            <label for="tag" class="font-semibold">Tag</label>
+          </IftaLabel>
+          <Message
+            v-if="$form.tagObj?.invalid && !$form.tagObj?.focused"
+            severity="secondary"
+            size="small"
+            variant="simple"
+          >
+            {{ $form.tagObj.error?.message }}
+          </Message>
+        </div>
 
-      <div class="flex flex-col gap-1">
-        <IftaLabel>
-          <IconField>
-            <DatePicker
-              name="ts"
-              v-model="initialValues.ts"
-              inputId="date"
-              fluid
-              showTime
-              hourFormat="24"
-              @date-select="clearError($form.ts)"
-            />
-            <InputIcon
-              class="pi pi-calendar-times cursor-pointer"
-              @click="clearField('ts', 'ts', new Date())"
-            />
-          </IconField>
-          <label for="date" class="font-semibold">Date</label>
-        </IftaLabel>
-        <Message
-          v-if="$form.ts?.invalid && !$form.ts?.focused"
-          severity="secondary"
-          size="small"
-          variant="simple"
-        >
-          {{ $form.ts.error?.message }}
-        </Message>
-      </div>
-      <div class="flex gap-2">
-        <Button type="submit" severity="secondary" label="Add Transaction" />
-      </div>
-    </Form>
-  </div>
+        <div class="flex flex-col gap-1">
+          <IftaLabel>
+            <IconField>
+              <DatePicker
+                name="ts"
+                v-model="initialValues.ts"
+                inputId="date"
+                fluid
+                showTime
+                hourFormat="24"
+                dateFormat="dd/mm/yy"
+                @date-select="clearError($form.ts)"
+              />
+              <InputIcon
+                class="pi pi-calendar-times cursor-pointer"
+                @click="clearField('ts', 'ts', new Date())"
+              />
+            </IconField>
+            <label for="date" class="font-semibold">Date</label>
+          </IftaLabel>
+          <Message
+            v-if="$form.ts?.invalid && !$form.ts?.focused"
+            severity="secondary"
+            size="small"
+            variant="simple"
+          >
+            {{ $form.ts.error?.message }}
+          </Message>
+        </div>
+        <div class="flex gap-2">
+          <Button type="submit" severity="secondary" label="Add Transaction" />
+        </div>
+      </Form>
+    </div>
+  </Fieldset>
 </template>

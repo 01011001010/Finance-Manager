@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS transactions (
 INSERT INTO transactions (title)
 VALUES
   ('Christmas'),
-  ('Christmas'),
   ('Supermarket'),
   ('Boutique'),
   ('Rent');
@@ -41,8 +40,8 @@ CREATE TABLE IF NOT EXISTS pinnedTransactions (
 );
 INSERT INTO pinnedTransactions (id_t)
 VALUES
-  (3),
-  (5);
+  (2),
+  (4);
 
 
 
@@ -74,8 +73,8 @@ INSERT INTO deltas (subtitle, amount, id_a, tag, ts)
 VALUES
   ('Parents', 10, 6, 1, '2025-12-24 20:00:00+01'),
   ('Grandparents', 1, 1, 1, '2025-12-24 20:01:00+01'),
-  (NULL, -20, 6, 2, '2025-12-28 12:00:00+01'),
-  (NULL, -6.85,  1, 2, '2025-12-28 12:00:00+01'),
+  (NULL, -20, 1, 2, '2025-12-28 12:00:00+01'),
+  (NULL, -6.85,  6, 2, '2025-12-28 12:00:00+01'),
   (NULL, -57,  4, 3, '2025-12-28 12:30:00+01'),
   ('January', -100,  5, 4, '2026-01-01 09:00:00+01'),
   ('January', -2.85,  5, 5, '2026-01-01 09:00:00+01');
@@ -90,9 +89,9 @@ CREATE TABLE IF NOT EXISTS deltasPerTransaction (
 INSERT INTO deltasPerTransaction (id_t, id_d)
 VALUES
   (1, 1),
-  (2, 2),
-  (3, 3),
-  (3, 4),
-  (4, 5),
-  (5, 6),
-  (5, 7);
+  (1, 2),
+  (2, 3),
+  (2, 4),
+  (3, 5),
+  (4, 6),
+  (4, 7);
