@@ -15,7 +15,6 @@ This full-stack engine is being developed as a personal project to replace manua
 
 Feel free to adapt this project to your needs or use it as a starting point for your own project.
 
-<!-- TODO: add example images -->
 The current (actively changing) visual or the app:
 ![Current app visual](/Example.png)
 
@@ -34,6 +33,7 @@ The current (actively changing) visual or the app:
 ### Frontend
 
 [![Vue.js][vue-shield]][vue-url]
+[![PrimeVue][primevue-shield]][primevue-url]
 
 ### Development
 
@@ -92,6 +92,8 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information
 [postgres-url]: https://www.postgresql.org/
 [vue-shield]: https://img.shields.io/badge/Vue.js-3.5-4fc08d?style=flat&logo=vuedotjs
 [vue-url]: https://vuejs.org/
+[primevue-shield]: https://img.shields.io/badge/PrimeVue-4-4fc08d?style=flat&logo=primevue
+[primevue-url]: https://primevue.org/
 [license-shield]: https://img.shields.io/badge/license-MIT-blue
 [license-url]: https://github.com/01011001010/Finance-Manager/blob/main/LICENSE
 [precommit-shield]: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit
