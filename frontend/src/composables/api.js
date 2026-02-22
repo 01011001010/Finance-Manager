@@ -1,15 +1,13 @@
 import { ref, computed } from "vue";
 
 // Data refs
-const transactions = ref([]);
+const deltas = ref([]);
+const transactionOverview = ref([]);
 const accountsWithArchived = ref([]);
 const tagsWithArchived = ref([]);
-const pinnedId_t = ref([]);
 const selectedTransaction = ref(null);
 
-const pinnedTransactions = computed(() =>
-  transactions.value.filter((t) => pinnedId_t.value.includes(t.id_t)),
-);
+const pinnedTransactions = ref([]);
 
 const accounts = computed(() =>
   accountsWithArchived.value.filter((a) => !a.hidden),
@@ -17,39 +15,106 @@ const accounts = computed(() =>
 const tags = computed(() => tagsWithArchived.value.filter((t) => !t.hidden));
 
 export function getData() {
-  const loadTransactions = async () => {
-    const res = await fetch("/api/deltaLog");
-    transactions.value = await res.json();
+  const loadDeltas = async () => {
+    const response = await fetch("/api/data/deltas");
+
+    if (response.ok) {
+      deltas.value = (await response.json()).data;
+      // console.log('deltas loaded');  // DEV
+      // console.log(deltas.value);  // DEV
+    } else {
+      deltas.value = null;
+      console.error(
+        "Loading deltas failed\nError detail:",
+        (await response.json()).detail,
+      );
+    }
+  };
+
+  const loadOverview = async () => {
+    const response = await fetch("/api/data/overview");
+
+    if (response.ok) {
+      transactionOverview.value = (await response.json()).data;
+      // console.log('overview loaded');  // DEV
+      // console.log(transactionOverview.value);  // DEV
+    } else {
+      transactionOverview.value = null;
+      console.error(
+        "Loading overview failed\nError detail:",
+        (await response.json()).detail,
+      );
+    }
   };
 
   const loadAccounts = async () => {
-    const res = await fetch("/api/accounts");
-    accountsWithArchived.value = await res.json();
+    const response = await fetch("/api/data/accounts");
+
+    if (response.ok) {
+      accountsWithArchived.value = (await response.json()).data;
+      // console.log('accounts loaded');  // DEV
+      // console.log(accountsWithArchived.value);  // DEV
+    } else {
+      accountsWithArchived.value = null;
+      console.error(
+        "Loading accounts failed\nError detail:",
+        (await response.json()).detail,
+      );
+    }
   };
 
   const loadTags = async () => {
-    const res = await fetch("/api/tags");
-    tagsWithArchived.value = await res.json();
+    const response = await fetch("/api/data/tags");
+
+    if (response.ok) {
+      tagsWithArchived.value = (await response.json()).data;
+      // console.log('tags loaded');  // DEV
+      // console.log(tagsWithArchived.value);  // DEV
+    } else {
+      tagsWithArchived.value = null;
+      console.error(
+        "Loading tags failed\nError detail:",
+        (await response.json()).detail,
+      );
+    }
   };
 
   const loadPinned = async () => {
-    const res = await fetch("/api/pinned");
-    pinnedId_t.value = await res.json();
+    const response = await fetch("/api/data/pinned");
+
+    if (response.ok) {
+      pinnedTransactions.value = (await response.json()).data;
+      // console.log('pinned loaded');  // DEV
+      // console.log(pinnedTransactions.value);  // DEV
+    } else {
+      pinnedTransactions.value = null;
+      console.error(
+        "Loading pinned failed\nError detail:",
+        (await response.json()).detail,
+      );
+    }
+  };
+
+  const reloadLogTransactions = async () => {
+    await loadDeltas();
+    await loadPinned();
   };
 
   return {
-    transactions,
+    deltas,
     accounts,
+    transactionOverview,
     accountsWithArchived,
     tags,
     tagsWithArchived,
-    pinnedId_t,
     pinnedTransactions,
     selectedTransaction,
-    loadTransactions,
+    loadDeltas,
+    loadOverview,
     loadAccounts,
     loadTags,
     loadPinned,
+    reloadLogTransactions,
   };
 }
 

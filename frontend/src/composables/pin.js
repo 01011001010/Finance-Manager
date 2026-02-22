@@ -7,29 +7,32 @@ import { getData, apiPost } from "@/composables/api";
 export function pinUtils() {
   // Set-up
   const { successToast, neutralToast, errorToast } = customToaster();
-  const { pinnedId_t, loadPinned } = getData();
+  const { reloadLogTransactions, loadPinned, loadDeltas } = getData();
   const { post } = apiPost();
 
-  const isPinned = (id) => pinnedId_t.value.includes(id);
+  const isPinned = (transactionObj) => transactionObj.pinned;
 
-  const setPin = async (id, pin) => {
+  const togglePin = async (transactionObj) => {
+    // console.log(transactionObj);
+    const id = transactionObj.id_t;
+    const pin = !isPinned(transactionObj);
     const messagePrefix = pin ? "" : "un";
-    const url = pin ? "/api/transactions/pin" : "/api/transactions/unpin";
-    const payload = JSON.stringify({ id_t: id });
-    const response = await post(url, payload);
-    console.log(response); // DEV
+    const payload = JSON.stringify({ id_t: id, newPin: pin });
+    // console.log(
+    //   `Transaction ${id} ${messagePrefix}pin started\nPayload: `,
+    //   payload,
+    // );
+    const response = await post("/api/update/pin", payload);
+    // console.log(response); // DEV
     if (response.ok) {
-      console.log("ok Toast"); // DEV
+      // console.log("ok Toast"); // DEV
       successToast(`Transaction ${messagePrefix}pinned`);
-      await loadPinned();
+      await reloadLogTransactions(); // TODO unnecessary full load, think about separating the list of pinned id_t
     } else {
-      console.log("something went wrong Toast"); // DEV
+      // console.log("something went wrong Toast"); // DEV
+      // console.log(response);
       errorToast(`The transaction could not be ${messagePrefix}pinned`);
     }
-  };
-
-  const togglePin = async (id) => {
-    setPin(id, !isPinned(id));
   };
 
   return {

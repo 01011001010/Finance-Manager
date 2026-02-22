@@ -27,12 +27,12 @@ const props = defineProps({
 });
 
 // Set-up
-const { transactions, pinnedTransactions, selectedTransaction } = getData();
+const { deltas, pinnedTransactions, selectedTransaction } = getData();
 const { isPinned, togglePin } = pinUtils();
 const { successToast, neutralToast, errorToast } = customToaster();
 
 const expandedRows = ref({});
-const items = props.pinned ? pinnedTransactions : transactions;
+const items = props.pinned ? pinnedTransactions : deltas;
 
 // Data formatting
 const formatCurrency = (delta) => {
@@ -147,7 +147,8 @@ if (!props.autoExpand) {
         ],
       }),
     }"
-    ><template v-if="!autoExpand" #header>
+  >
+    <template v-if="!autoExpand" #header>
       <div class="flex gap-2">
         <Button
           variant="text"
@@ -165,6 +166,12 @@ if (!props.autoExpand) {
         />
       </div>
     </template>
+    <template #empty>
+      <span class="text-xs opacity-60 flex items-center"
+        >{{ props.pinned ? "Bookmark" : "Add" }} transactions to fill it
+        here</span
+      >
+    </template>
     <Column v-if="!autoExpand" expander class="w-8" />
     <Column field="title"></Column>
     <Column :exportable="false" class="w-64">
@@ -176,7 +183,7 @@ if (!props.autoExpand) {
             size="small"
             severity="secondary"
             class="group"
-            @click="togglePin(slotProps.data.id_t)"
+            @click="togglePin(slotProps.data)"
           >
             <template #icon>
               <div
@@ -185,7 +192,7 @@ if (!props.autoExpand) {
                 <i
                   class="group-hover:opacity-0 transition-opacity duration-200"
                   :class="
-                    isPinned(slotProps.data.id_t)
+                    isPinned(slotProps.data)
                       ? 'pi pi-bookmark-fill'
                       : 'pi pi-bookmark'
                   "
@@ -193,7 +200,7 @@ if (!props.autoExpand) {
                 <i
                   class="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   :class="
-                    isPinned(slotProps.data.id_t)
+                    isPinned(slotProps.data)
                       ? 'pi pi-bookmark'
                       : 'pi pi-bookmark-fill'
                   "

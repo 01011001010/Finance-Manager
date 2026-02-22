@@ -24,10 +24,10 @@ import DrawerMenuLog from "@/components/DrawerMenuLog.vue";
 import TransactionList from "../components/TransactionList.vue";
 
 // Set-up
-const { loadTransactions, loadAccounts, loadTags, loadPinned } = getData();
+const { loadDeltas, loadAccounts, loadTags, loadPinned } = getData();
 
 onMounted(() => {
-  loadTransactions();
+  loadDeltas();
   loadAccounts();
   loadTags();
   loadPinned();
@@ -47,7 +47,7 @@ onMounted(() => {
         <TransactionList :pinned="true" :autoExpand="false" />
       </Fieldset>
 
-      <Fieldset legend="Chronological log">
+      <Fieldset legend="Chronological Log">
         <TransactionList :pinned="false" :autoExpand="true" />
       </Fieldset>
     </div>

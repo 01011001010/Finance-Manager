@@ -13,7 +13,7 @@ const { accountsWithArchived, loadAccounts } = getData();
     :items="accountsWithArchived"
     :loadFn="loadAccounts"
     itemID="id_a"
-    apiUrl="/api/archive/account"
+    apiUrl="/api/update/archive/account"
     toastName="Account"
   >
     <template #default="{ item }">

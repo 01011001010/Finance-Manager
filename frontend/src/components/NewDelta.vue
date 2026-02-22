@@ -1,3 +1,5 @@
+<!-- TODO perhaps colour the latest added row with a special colour to highlight? -->
+
 <script setup>
 import { ref, watch, nextTick } from "vue";
 import { Form } from "@primevue/forms";
@@ -20,7 +22,8 @@ import { getData, apiPost } from "@/composables/api";
 // Set-up
 const vFocustrap = FocusTrap;
 const { successToast, neutralToast, errorToast } = customToaster();
-const { accounts, tags, loadTransactions, selectedTransaction } = getData();
+const { accounts, tags, selectedTransaction, reloadLogTransactions } =
+  getData();
 const { post } = apiPost();
 
 // Values
@@ -199,8 +202,8 @@ const onFormSubmit = async ({ valid, states, reset }) => {
   }
 
   const url = selectedTransaction.value
-    ? "/api/transactions/existing"
-    : "/api/transactions/new";
+    ? "/api/add/delta"
+    : "/api/add/transaction";
 
   const delta = {
     subtitle: states.subtitle.value,
@@ -229,7 +232,8 @@ const onFormSubmit = async ({ valid, states, reset }) => {
     successToast("Transaction added");
     resetForm();
     reset();
-    await loadTransactions();
+    await reloadLogTransactions(); // if adding delta to a pinned transaction, without load it would not show // TODO see how it behaves with expanded rows
+    // TODO see it Overview.vue loads it's data repeatedly, or should load now once
   } else {
     // console.log("something went wrong Toast"); // DEV
     errorToast("The transaction could not be added");

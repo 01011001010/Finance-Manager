@@ -23,7 +23,8 @@ VALUES
 
 CREATE TABLE IF NOT EXISTS transactions (
     id_t SERIAL PRIMARY KEY,
-    title TEXT NOT NULL
+    title TEXT NOT NULL,
+    pinned BOOLEAN NOT NULL DEFAULT FALSE
 );
 INSERT INTO transactions (title)
 VALUES
@@ -31,17 +32,6 @@ VALUES
   ('Supermarket'),
   ('Boutique'),
   ('Rent');
-
-
-
-CREATE TABLE IF NOT EXISTS pinnedTransactions (
-    id_t SERIAL PRIMARY KEY,
-    pin_ts TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-INSERT INTO pinnedTransactions (id_t)
-VALUES
-  (2),
-  (4);
 
 
 
@@ -77,7 +67,8 @@ VALUES
   (NULL, -6.85,  6, 2, '2025-12-28 12:00:00+01'),
   (NULL, -57,  4, 3, '2025-12-28 12:30:00+01'),
   ('January', -100,  5, 4, '2026-01-01 09:00:00+01'),
-  ('January', -2.85,  5, 5, '2026-01-01 09:00:00+01');
+  ('January', -2.85,  5, 5, '2026-01-01 09:00:00+01'),
+  (NULL, -7.42, 6, 2, '2026-01-06 16:16:42+01');
 
 
 
@@ -94,4 +85,5 @@ VALUES
   (2, 4),
   (3, 5),
   (4, 6),
-  (4, 7);
+  (4, 7),
+  (2, 8);

@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel  # TODO look more into validation
 import psycopg2 as dbAdapter
 from psycopg2 import errors as dbErrors
+from psycopg2.sql import SQL, Identifier
 from contextlib import contextmanager
 
 
@@ -61,8 +62,9 @@ class AddingTag(BaseModel):
     tag_name: str
 
 
-class PinId(BaseModel):
+class settingPin(BaseModel):
     id_t: int
+    newPin: bool
 
 
 class AddingAccount(BaseModel):
@@ -80,7 +82,7 @@ class Archiving(BaseModel):
 app = FastAPI()
 
 
-@app.post("/transactions/new")
+@app.post("/add/transaction")
 def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
     try:
         with dbSession() as conn:
@@ -112,10 +114,11 @@ def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
                         "detail": f"Transaction {id_t} and {id_d} added and linked"}
 
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
-@app.post("/transactions/existing")
+@app.post("/add/delta")
 def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
     try:
         with dbSession() as conn:
@@ -140,38 +143,8 @@ def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
                         "detail": f"Transaction {payload.id_t} linked to delta {id_d}"}
 
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
-
-
-def pinUnpin(payload: PinId, insert: bool):
-    QUERY = ("""INSERT INTO pinnedTransactions (id_t)
-                VALUES (%s);"""
-             if insert else
-             """DELETE FROM pinnedTransactions
-                WHERE id_t = %s;""")
-    UN = "" if insert else "un"
-
-    try:
-        with dbSession() as conn:
-            with conn.cursor() as cur:
-                cur.execute(QUERY,
-                            (payload.id_t,))
-
-                return {"status": "ok",
-                        "detail": f"Transaction {payload.id_t} {UN}pinned successfully"}
-
-    except Exception as e:
-        return {"status": "error", "detail": str(e)}
-
-
-@app.post("/transactions/pin")
-def pinTransaction(payload: PinId) -> dict[str, str]:
-    return pinUnpin(payload, True)
-
-
-@app.post("/transactions/unpin")
-def unpinTransaction(payload: PinId) -> dict[str, str]:
-    return pinUnpin(payload, False)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
 @app.post("/add/account")
@@ -222,15 +195,18 @@ def addTag(payload: AddingTag) -> dict[str, str]:
                             detail=str(e))
 
 
-def archive(table: str, idCol: str, id: int, newArchivedState: bool, name: str):
-    message = "archived" if newArchivedState else "restored"
+def archive(table: str, col: str, id: int, newState: bool, name: str) -> dict[str, str]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"""UPDATE {table}
-                               SET archived = %s
-                               WHERE {idCol} = %s;""",
-                            (newArchivedState, id))
+                query = SQL("""UPDATE {tbl}
+                            SET archived = %s
+                            WHERE {col} = %s;""").format(
+                    tbl=Identifier(table),
+                    col=Identifier(col)
+                )
+                cur.execute(query, (newState, id))
+                message = "archived" if newState else "restored"
                 return {"status": "ok",
                         "detail": f"{name} {id} {message}"}
     except Exception as e:
@@ -238,18 +214,34 @@ def archive(table: str, idCol: str, id: int, newArchivedState: bool, name: str):
                             detail=str(e))
 
 
-@app.post("/archive/tag")
+@app.post("/update/archive/tag")
 def archiveTag(payload: Archiving) -> dict[str, str]:
     return archive("tags", "tag", payload.id, payload.newArchivedState, "Tag")
 
 
-@app.post("/archive/account")
+@app.post("/update/archive/account")
 def archiveAccount(payload: Archiving) -> dict[str, str]:
     return archive("accounts", "id_a", payload.id, payload.newArchivedState, "Account")
 
 
-@app.get("/accounts")
-def getAccounts() -> list[dict[str, Any]] | dict[str, str]:
+@app.post("/update/pin")
+def setPin(payload: settingPin) -> dict[str, str]:
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""UPDATE transactions
+                               SET pinned = %s
+                               WHERE id_t = %s;""", (payload.newPin, payload.id_t))
+                un = "" if payload.newPin else "un"
+                return {"status": "ok",
+                        "detail": f"Transaction {payload.id_t} {un}pinned successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
+
+
+@app.get("/data/accounts")
+def getAccounts() -> dict[str, str | list[dict[str, Any]]]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
@@ -261,17 +253,19 @@ def getAccounts() -> list[dict[str, Any]] | dict[str, str]:
                                ORDER BY a.id_a ASC;""")
                 rows = cur.fetchall()
 
-        return [{"id_a": id_a,
-                 "currency": currency,  # TODO swap for €, $, ... ?
-                 "account": name,
-                 "hidden": hidden}
-                for id_a, currency, name, hidden in rows]
+        return {"status": "ok",
+                "data": [{"id_a": id_a,
+                          "currency": currency,
+                          "account": name,
+                          "hidden": hidden}
+                         for id_a, currency, name, hidden in rows]}
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
-@app.get("/tags")
-def getTags() -> list[dict[str, Any]] | dict[str, str]:
+@app.get("/data/tags")
+def getTags() -> dict[str, str | list[dict[str, Any]]]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
@@ -281,34 +275,25 @@ def getTags() -> list[dict[str, Any]] | dict[str, str]:
                                FROM tags t
                                ORDER BY t.tag ASC;""")
                 rows = cur.fetchall()
-        return [{"tag": tag,
-                 "tag_name": name,
-                 "hidden": hidden}
-                for tag, name, hidden in rows]
+        return {"status": "ok",
+                "data": [{"tag": tag,
+                          "tag_name": name,
+                          "hidden": hidden}
+                         for tag, name, hidden in rows]}
+
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
-@app.get("/pinned")
-def getPinned() -> list[int] | dict[str, str]:
-    try:
-        with dbSession() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""SELECT p.id_t
-                               FROM pinnedTransactions p;""")
-                rows = cur.fetchall()
-        return [int(id_t) for (id_t,) in rows]
-    except Exception as e:
-        return {"status": "error", "detail": str(e)}
-
-
-@app.get("/transactions")
-def getTransactions():
+@app.get("/data/pinned")
+def getPinned() -> dict[str, str | list[Any]]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
                 cur.execute("""SELECT t.id_t,
                                       t.title,
+                                      t.pinned,
                                       d.subtitle,
                                       tags.tag_name,
                                       d.id_d,
@@ -322,39 +307,95 @@ def getTransactions():
                                JOIN deltas d ON d.id_d = dt.id_d
                                JOIN accounts a ON a.id_a = d.id_a
                                LEFT JOIN tags ON tags.tag = d.tag
-                               ORDER BY t.id_t, d.id_d;""")
+                               WHERE t.pinned
+                               ORDER BY d.ts DESC;""")
                 rows = cur.fetchall()
 
         transactions = {}
-        for id_t, title, subtitle, tag, id_d, amount, curr, account, ts, ts_log in rows:
+        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log in rows:
             if id_t not in transactions:
-                transactions[id_t] = {"id": id_t,
+                transactions[id_t] = {"id_t": id_t,
                                       "title": title,
-                                      "subtitle": subtitle,
+                                      "pinned": pin,
                                       "deltas": []}
 
-            transactions[id_t]["deltas"].append({"id": id_d,
-                                                 "amount": str(amount),  # TODO float ?
-                                                 "currency": curr,  # TODO swap € ?
-                                                 "account": account,
+            transactions[id_t]["deltas"].append({"id_d": id_d,
+                                                 "subtitle": subt,
+                                                 "amount": amount,
+                                                 "currency": curr,
+                                                 "account": acc,
+                                                 "tag": tag,
+                                                 "ts": ts.isoformat() if ts else None,
+                                                 "ts_log": ts_log.isoformat()})
+
+        return {"status": "ok", "data": list(transactions.values())}
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
+
+
+@app.get("/data/overview")
+def getTransactionOverview() -> dict[str, str | list[Any]]:
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""SELECT t.id_t,
+                                      t.title,
+                                      t.pinned,
+                                      d.subtitle,
+                                      tags.tag_name,
+                                      d.id_d,
+                                      d.amount,
+                                      a.currency,
+                                      a.account,
+                                      d.ts,
+                                      d.ts_log
+                               FROM transactions t
+                               JOIN deltasPerTransaction dt ON dt.id_t = t.id_t
+                               JOIN deltas d ON d.id_d = dt.id_d
+                               JOIN accounts a ON a.id_a = d.id_a
+                               LEFT JOIN tags ON tags.tag = d.tag
+                               ORDER BY d.ts DESC;""")
+                rows = cur.fetchall()
+
+        transactions = {}
+        data = []
+        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log in rows:
+            if id_t not in transactions:
+                transactions[id_t] = {"id_t": id_t,
+                                      "title": title,
+                                      "pinned": pin,
+                                      "deltas": []}
+
+            transactions[id_t]["deltas"].append({"id_d": id_d,
+                                                 "subtitle": subt,
+                                                 "amount": amount,
+                                                 "currency": curr,
+                                                 "account": acc,
                                                  "tag": tag,
                                                  "ts": ts.isoformat() if ts else None,
                                                  "ts_log": (ts_log.isoformat()
                                                             if ts_log else
                                                             None)})
+            if not len(data) or id_t != data[-1]["id_t"]:
+                data.append(transactions[id_t])
 
-        return list(transactions.values())
+        return {"status": "ok", "data": data}
+
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
-@app.get("/deltaLog")
-def getDeltaLog():
+@app.get("/data/deltas")
+def getDeltaLog() -> dict[str, str | list[Any]]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
                 cur.execute("""SELECT t.id_t,
                                       t.title,
+                                      t.pinned,
                                       d.subtitle,
                                       tags.tag_name,
                                       d.id_d,
@@ -368,27 +409,28 @@ def getDeltaLog():
                                JOIN deltas d ON d.id_d = dt.id_d
                                JOIN accounts a ON a.id_a = d.id_a
                                LEFT JOIN tags ON tags.tag = d.tag
-                               ORDER BY d.ts_log;""")
+                               ORDER BY d.ts DESC;""")
                 rows = cur.fetchall()
 
         transactions = []
-        for id_t, title, subtitle, tag, id_d, amount, curr, account, ts, ts_log in rows:
+        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log in rows:
             if not len(transactions) or id_t != transactions[-1]["id_t"]:
                 transactions.append({"id_t": id_t,
                                      "title": title,
+                                     "pinned": pin,
                                      "deltas": []})
 
             transactions[-1]["deltas"].append({"id_d": id_d,
-                                               "subtitle": subtitle,
+                                               "subtitle": subt,
                                                "amount": amount,
                                                "currency": curr,
-                                               "account": account,
+                                               "account": acc,
                                                "tag": tag,
                                                "ts": ts.isoformat() if ts else None,
-                                               "ts_log": (ts_log.isoformat()
-                                                          if ts_log else
-                                                          None)})
+                                               "ts_log": ts_log.isoformat()})
 
-        return transactions
+        return {"status": "ok", "data": transactions}
+
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
