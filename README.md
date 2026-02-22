@@ -13,9 +13,11 @@
 
 This full-stack engine is being developed as a personal project to replace manual spreadsheet tracking with a robust automated solution. Transitioning from Google Sheets to this custom engine ensures data integrity, allows for complex analyses, and facilitates automated household inventory management.
 
-<!-- TODO: add example images -->
-
 Feel free to adapt this project to your needs or use it as a starting point for your own project.
+
+<!-- TODO: add example images -->
+The current (actively changing) visual or the app:
+![Current app visual](/Example.png)
 
 <!-- TODO: showcase current data model -->
 
