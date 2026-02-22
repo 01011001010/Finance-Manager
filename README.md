@@ -70,7 +70,8 @@ docker compose up -d --build
 - [x] Transition to PrimeVue 4
 - [x] Account and tag management
 - [ ] Transaction overview
-    - [ ] Multi-day transactions
+    - [x] Multi-day transactions
+    - [ ] Visual tweaks
     - [ ] Account state tracking
 - [ ] Advanced analytics display
 - [ ] Household inventory
