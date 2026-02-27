@@ -7,6 +7,10 @@
           - left padding
           - sorting? (think how without headers)
 
+          Month row divider?
+
+          disable row selection for overview
+
           ...
 -->
 
@@ -22,23 +26,29 @@ import { pinUtils } from "@/composables/pin";
 import { customToaster } from "@/composables/customToast";
 
 const props = defineProps({
-  pinned: { type: Boolean, required: true },
+  dataSource: { type: String, required: true },
   autoExpand: { type: Boolean, required: true },
 });
 
 // Set-up
-const { deltas, pinnedTransactions, selectedTransaction } = getData();
+const { deltas, pinnedTransactions, transactionOverview, selectedTransaction } =
+  getData();
 const { isPinned, togglePin } = pinUtils();
 const { successToast, neutralToast, errorToast } = customToaster();
 
 const expandedRows = ref({});
-const items = props.pinned ? pinnedTransactions : deltas;
+const items =
+  props.dataSource == "pinned"
+    ? pinnedTransactions
+    : props.dataSource == "chronological"
+      ? deltas
+      : transactionOverview;
 
 // Data formatting
-const formatCurrency = (delta) => {
-  return delta.amount.toLocaleString("en-CH", {
+const formatCurrency = (value, currency) => {
+  return value.toLocaleString("en-CH", {
     style: "currency",
-    currency: delta.currency,
+    currency: currency,
   });
 };
 const formatDate = (value) => {
@@ -148,11 +158,12 @@ if (!props.autoExpand) {
       }),
     }"
   >
-    <template v-if="!autoExpand" #header>
+    <template v-if="!autoExpand && items?.length > 0" #header>
       <div class="flex gap-2">
         <Button
           variant="text"
           size="small"
+          class="!p-0.5 !text-[0.7rem]"
           icon="pi pi-plus"
           label="Expand All"
           @click="expandAll"
@@ -160,6 +171,7 @@ if (!props.autoExpand) {
         <Button
           variant="text"
           size="small"
+          class="!p-0.5 !text-[0.7rem]"
           icon="pi pi-minus"
           label="Collapse All"
           @click="collapseAll"
@@ -168,8 +180,8 @@ if (!props.autoExpand) {
     </template>
     <template #empty>
       <span class="text-xs opacity-60 flex items-center"
-        >{{ props.pinned ? "Bookmark" : "Add" }} transactions to fill it
-        here</span
+        >{{ props.dataSource == "pinned" ? "Bookmark" : "Add" }} transactions to
+        fill it here</span
       >
     </template>
     <Column v-if="!autoExpand" expander class="w-8" />
@@ -181,8 +193,8 @@ if (!props.autoExpand) {
             variant="text"
             rounded
             size="small"
+            class="!p-0.5 !w-7 !h-7 !text-[0.7rem] group"
             severity="secondary"
-            class="group"
             @click="togglePin(slotProps.data)"
           >
             <template #icon>
@@ -212,6 +224,7 @@ if (!props.autoExpand) {
             variant="text"
             rounded
             size="small"
+            class="!p-0.5 !w-7 !h-7 !text-[0.7rem]"
             icon="pi pi-pencil"
             severity="secondary"
             @click="editTransaction(slotProps.data)"
@@ -220,6 +233,7 @@ if (!props.autoExpand) {
             variant="text"
             rounded
             size="small"
+            class="!p-0.5 !w-7 !h-7 !text-[0.7rem]"
             icon="pi pi-trash"
             severity="danger"
             @click="confirmDeleteTransaction(slotProps.data)"
@@ -233,7 +247,8 @@ if (!props.autoExpand) {
         <DataTable
           :value="slotProps.data.deltas"
           :showHeaders="false"
-          class="w-full"
+          class="w-full text-sm"
+          tableClass="table-fixed w-full"
           size="small"
           :pt="{
             tbody: {
@@ -244,15 +259,37 @@ if (!props.autoExpand) {
             },
           }"
         >
-          <Column field="subtitle" class="w-1/6 pl-8"></Column>
-          <Column field="tag" class="w-1/6"></Column>
-          <Column field="account" class="w-1/8"></Column>
-          <Column field="amount" class="w-1/6 text-right pr-8">
+          <Column field="subtitle" class="w-[20%] pl-8 truncate"></Column>
+          <Column field="tag" class="w-[13%] truncate"></Column>
+          <Column
+            field="amount"
+            class="w-[14%] text-right pr-6 whitespace-nowrap"
+          >
             <template #body="slotProps">
-              {{ formatCurrency(slotProps.data) }}
+              <span class="font-mono">
+                {{
+                  formatCurrency(slotProps.data.amount, slotProps.data.currency)
+                }}
+              </span>
             </template>
           </Column>
-          <Column field="ts" class="w-1/5">
+          <Column field="account" class="w-[16%] pl-8 truncate"></Column>
+          <Column
+            field="balance_after"
+            class="w-[17%] text-right pr-6 whitespace-nowrap"
+          >
+            <template #body="slotProps">
+              <span class="font-mono">
+                {{
+                  formatCurrency(
+                    slotProps.data.balance_after,
+                    slotProps.data.currency,
+                  )
+                }}
+              </span>
+            </template>
+          </Column>
+          <Column field="ts" class="w-[20%] truncate">
             <template #body="slotProps">
               {{ formatDate(slotProps.data.ts) }}
             </template>
@@ -264,6 +301,7 @@ if (!props.autoExpand) {
                   variant="text"
                   rounded
                   size="small"
+                  class="!p-0.5 !w-7 !h-7 !text-[0.7rem]"
                   icon="pi pi-pencil"
                   severity="secondary"
                   @click="editDelta(slotProps.data)"
@@ -272,6 +310,7 @@ if (!props.autoExpand) {
                   variant="text"
                   rounded
                   size="small"
+                  class="!p-0.5 !w-7 !h-7 !text-[0.7rem]"
                   icon="pi pi-trash"
                   severity="danger"
                   @click="confirmDeleteDelta(slotProps.data)"

@@ -291,28 +291,25 @@ def getPinned() -> dict[str, str | list[Any]]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute("""SELECT t.id_t,
-                                      t.title,
-                                      t.pinned,
-                                      d.subtitle,
-                                      tags.tag_name,
-                                      d.id_d,
-                                      d.amount,
-                                      a.currency,
-                                      a.account,
-                                      d.ts,
-                                      d.ts_log
-                               FROM transactions t
-                               JOIN deltasPerTransaction dt ON dt.id_t = t.id_t
-                               JOIN deltas d ON d.id_d = dt.id_d
-                               JOIN accounts a ON a.id_a = d.id_a
-                               LEFT JOIN tags ON tags.tag = d.tag
-                               WHERE t.pinned
-                               ORDER BY d.ts DESC;""")
+                cur.execute("""SELECT id_t,
+                                      title,
+                                      pinned,
+                                      subtitle,
+                                      tag_name,
+                                      id_d,
+                                      amount,
+                                      currency,
+                                      account,
+                                      ts,
+                                      ts_log,
+                                      balance_after
+                               FROM completeDeltaInfo
+                               WHERE pinned
+                               ORDER BY ts DESC;""")
                 rows = cur.fetchall()
 
         transactions = {}
-        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log in rows:
+        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log, b in rows:
             if id_t not in transactions:
                 transactions[id_t] = {"id_t": id_t,
                                       "title": title,
@@ -321,7 +318,8 @@ def getPinned() -> dict[str, str | list[Any]]:
 
             transactions[id_t]["deltas"].append({"id_d": id_d,
                                                  "subtitle": subt,
-                                                 "amount": amount,
+                                                 "amount": float(amount),
+                                                 "balance_after": float(b),
                                                  "currency": curr,
                                                  "account": acc,
                                                  "tag": tag,
@@ -340,28 +338,25 @@ def getTransactionOverview() -> dict[str, str | list[Any]]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute("""SELECT t.id_t,
-                                      t.title,
-                                      t.pinned,
-                                      d.subtitle,
-                                      tags.tag_name,
-                                      d.id_d,
-                                      d.amount,
-                                      a.currency,
-                                      a.account,
-                                      d.ts,
-                                      d.ts_log
-                               FROM transactions t
-                               JOIN deltasPerTransaction dt ON dt.id_t = t.id_t
-                               JOIN deltas d ON d.id_d = dt.id_d
-                               JOIN accounts a ON a.id_a = d.id_a
-                               LEFT JOIN tags ON tags.tag = d.tag
-                               ORDER BY d.ts DESC;""")
+                cur.execute("""SELECT id_t,
+                                      title,
+                                      pinned,
+                                      subtitle,
+                                      tag_name,
+                                      id_d,
+                                      amount,
+                                      currency,
+                                      account,
+                                      ts,
+                                      ts_log,
+                                      balance_after
+                               FROM completeDeltaInfo
+                               ORDER BY ts DESC;""")
                 rows = cur.fetchall()
 
         transactions = {}
         data = []
-        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log in rows:
+        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log, b in rows:
             if id_t not in transactions:
                 transactions[id_t] = {"id_t": id_t,
                                       "title": title,
@@ -370,7 +365,8 @@ def getTransactionOverview() -> dict[str, str | list[Any]]:
 
             transactions[id_t]["deltas"].append({"id_d": id_d,
                                                  "subtitle": subt,
-                                                 "amount": amount,
+                                                 "amount": float(amount),
+                                                 "balance_after": float(b),
                                                  "currency": curr,
                                                  "account": acc,
                                                  "tag": tag,
@@ -393,27 +389,24 @@ def getDeltaLog() -> dict[str, str | list[Any]]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute("""SELECT t.id_t,
-                                      t.title,
-                                      t.pinned,
-                                      d.subtitle,
-                                      tags.tag_name,
-                                      d.id_d,
-                                      d.amount,
-                                      a.currency,
-                                      a.account,
-                                      d.ts,
-                                      d.ts_log
-                               FROM transactions t
-                               JOIN deltasPerTransaction dt ON dt.id_t = t.id_t
-                               JOIN deltas d ON d.id_d = dt.id_d
-                               JOIN accounts a ON a.id_a = d.id_a
-                               LEFT JOIN tags ON tags.tag = d.tag
-                               ORDER BY d.ts DESC;""")
+                cur.execute("""SELECT id_t,
+                                      title,
+                                      pinned,
+                                      subtitle,
+                                      tag_name,
+                                      id_d,
+                                      amount,
+                                      currency,
+                                      account,
+                                      ts,
+                                      ts_log,
+                                      balance_after
+                               FROM completeDeltaInfo
+                               ORDER BY ts DESC;""")
                 rows = cur.fetchall()
 
         transactions = []
-        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log in rows:
+        for id_t, title, pin, subt, tag, id_d, amount, curr, acc, ts, ts_log, b in rows:
             if not len(transactions) or id_t != transactions[-1]["id_t"]:
                 transactions.append({"id_t": id_t,
                                      "title": title,
@@ -422,7 +415,8 @@ def getDeltaLog() -> dict[str, str | list[Any]]:
 
             transactions[-1]["deltas"].append({"id_d": id_d,
                                                "subtitle": subt,
-                                               "amount": amount,
+                                               "amount": float(amount),
+                                               "balance_after": float(b),
                                                "currency": curr,
                                                "account": acc,
                                                "tag": tag,

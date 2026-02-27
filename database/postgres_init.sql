@@ -87,3 +87,39 @@ VALUES
   (4, 6),
   (4, 7),
   (2, 8);
+
+
+CREATE VIEW deltasWithBalance AS
+SELECT
+    d.id_d,
+    d.subtitle,
+    d.ts_log,
+    d.ts,
+    d.amount,
+    d.id_a,
+    d.tag,
+    (a.opening_balance + SUM(d.amount) OVER (PARTITION BY d.id_a
+                                             ORDER BY d.ts ASC, d.id_d ASC)
+    ) AS balance_after
+FROM deltas d
+JOIN accounts a ON d.id_a = a.id_a;
+
+
+CREATE VIEW completeDeltaInfo AS
+SELECT t.id_t,
+       t.title,
+       t.pinned,
+       d.subtitle,
+       tags.tag_name,
+       d.id_d,
+       d.amount,
+       a.currency,
+       a.account,
+       d.ts,
+       d.ts_log,
+       d.balance_after
+FROM transactions t
+JOIN deltasPerTransaction dt ON dt.id_t = t.id_t
+JOIN deltasWithBalance d ON d.id_d = dt.id_d
+JOIN accounts a ON a.id_a = d.id_a
+LEFT JOIN tags ON tags.tag = d.tag;

@@ -21,7 +21,7 @@ import { getData } from "@/composables/api";
 // Custom components
 import NewDelta from "@/components/NewDelta.vue";
 import DrawerMenuLog from "@/components/DrawerMenuLog.vue";
-import TransactionList from "../components/TransactionList.vue";
+import TransactionList from "@/components/TransactionList.vue";
 
 // Set-up
 const { loadDeltas, loadAccounts, loadTags, loadPinned } = getData();
@@ -44,11 +44,11 @@ onMounted(() => {
         :toggleable="true"
         :collapsed="false"
       >
-        <TransactionList :pinned="true" :autoExpand="false" />
+        <TransactionList :dataSource="'pinned'" :autoExpand="false" />
       </Fieldset>
 
       <Fieldset legend="Chronological Log">
-        <TransactionList :pinned="false" :autoExpand="true" />
+        <TransactionList :dataSource="'chronological'" :autoExpand="true" />
       </Fieldset>
     </div>
 

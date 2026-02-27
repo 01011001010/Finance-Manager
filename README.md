@@ -72,7 +72,8 @@ docker compose up -d --build
 - [ ] Transaction overview
     - [x] Multi-day transactions
     - [ ] Visual tweaks
-    - [ ] Account state tracking
+    - [x] Account state tracking
+- [ ] Transaction data management
 - [ ] Advanced analytics display
 - [ ] Household inventory
     - [ ] Stock display and alerts

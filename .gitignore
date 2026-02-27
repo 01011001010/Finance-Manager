@@ -3,3 +3,4 @@
 .vscode
 .secrets.baseline
 .ruff_cache
+.backup.sql
