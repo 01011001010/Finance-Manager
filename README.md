@@ -51,15 +51,45 @@ Ensure you have **Docker** and **Docker Compose** installed.
 git clone https://github.com/01011001010/Finance-Manager.git
 cd Finance-Manager
 ```
-#### 2. Spin up the environment
+
+#### 2. Create `.env.prod` and/or `.env.dev`
 
 ```bash
-docker compose up -d --build
+cp .env.example .env.dev
+cp .env.example .env.prod
 ```
 
-#### 3. Access the application
+and change the example values where indicated
+
+#### 3. Spin up the environment
+
+```bash
+docker compose -f 'docker-compose.yaml' up -d --build
+```
+
+or for development mode
+
+```bash
+docker compose -f 'docker-compose.dev.yaml' up -d --build
+```
+
+#### 4. Access the application
 
 [`http://localhost:5173`](http://localhost:5173)
+
+#### NOTE: Do not run the production and the development modes at the same
+
+The ports are shared between production and development containers. Compose down before starting the other one:
+
+```bash
+docker compose -f 'docker-compose.yaml' down
+```
+
+or
+
+```bash
+docker compose -f 'docker-compose.dev.yaml' down
+```
 
 
 ## Roadmap
@@ -73,6 +103,7 @@ docker compose up -d --build
     - [x] Multi-day transactions
     - [ ] Visual tweaks
     - [x] Account state tracking
+- [x] Production and development separation
 - [ ] Transaction data management
 - [ ] Advanced analytics display
 - [ ] Household inventory

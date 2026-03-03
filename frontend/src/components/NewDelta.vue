@@ -341,14 +341,19 @@ const onFormSubmit = async ({ valid, states, reset }) => {
                 :currency="initialValues.accountObj?.currency || 'CHF'"
                 locale="en-CH"
                 fluid
-                @input="
-                  (e) => {
-                    initialValues.amount = e.value;
-                    clearError($form.amount);
-                  }
-                "
+                @value-change="clearError($form.amount)"
                 @focus="onBalanceFocus"
               />
+              <!-- BUG the form still freaks out with values over 1k with EUR, delimiters are the issue, GitHub issue comment posted-->
+              <!-- TODO @input="
+                  (e) => {
+                    initialValues.amount = e.value;
+                  }
+                "
+
+                is not ok, as it crashes with formatted values over 1k
+
+                update the v-if in the InputIcon below to monitor some other variable, that will be updates in @input -->
               <InputIcon
                 v-if="
                   initialValues.amount !== 0.0 && initialValues.amount !== null

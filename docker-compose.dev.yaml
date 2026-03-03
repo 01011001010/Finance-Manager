@@ -1,19 +1,20 @@
 services:
-  postgres_prod:
+  postgres_dev:
     networks:
-      prod_net:
+      dev_net:
         aliases:
           - postgres
     image: postgres:15
-    container_name: Fin-PostgresDB
+    container_name: Fin-PostgresDB-DEV
     restart: "no"
     env_file:
-      - .env.prod
+      - .env.dev
     environment:
       TZ: Europe/Zurich
     volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
-      - ./database/init_schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./database/init_schema.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./database/dev_data_seed.sql:/docker-entrypoint-initdb.d/02_dummy_data.sql
     ports:
       - "5432:5432"
     healthcheck:  # TODO complex healthcheck that tests db/table existence
@@ -22,41 +23,41 @@ services:
       timeout: 5s
       retries: 5
 
-  backend_prod:
+  backend_dev:
     networks:
-      prod_net:
+      dev_net:
         aliases:
           - backend
     build:
       context: ./backend
-    container_name: Fin-fastAPI
+    container_name: Fin-fastAPI-DEV
     restart: "no"
+    env_file:
+      - .env.dev
     environment:
       TZ: Europe/Zurich
     ports:
       - "8000:8000"
-    env_file:
-      - .env.prod
     depends_on:
-      postgres_prod:
+      postgres_dev:
         condition: service_healthy
 
-  frontend_prod:
+  frontend_dev:
     networks:
-    - prod_net
+    - dev_net
     build:
       context: ./frontend
-    container_name: Fin-Vue
+    container_name: Fin-Vue-DEV
     restart: "no"
     environment:
       TZ: Europe/Zurich
     ports:
       - "5173:5173"
     depends_on:
-      - backend_prod
+      - backend_dev
 
 volumes:
-  postgres_data_prod:
+  postgres_data_dev:
 
 networks:
-  prod_net:
+  dev_net:

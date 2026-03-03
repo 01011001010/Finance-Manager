@@ -1,7 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 
 
-
 CREATE TABLE IF NOT EXISTS accounts (
   id_a SERIAL PRIMARY KEY,
   account TEXT NOT NULL,
@@ -12,30 +11,12 @@ CREATE TABLE IF NOT EXISTS accounts (
   CONSTRAINT unique_account_details UNIQUE (account, currency)
 );
 
-INSERT INTO accounts (account, currency, opening_balance)
-VALUES
-  ('Cash', 'EUR', 50),
-  ('Cash', 'CHF', 150),
-  ('Online bank', 'GBP', 50),
-  ('Online bank', 'CHF', 500),
-  ('Bank', 'CHF', 100),
-  ('Bank', 'EUR', 200);
-
-
 
 CREATE TABLE IF NOT EXISTS transactions (
   id_t SERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   pinned BOOLEAN NOT NULL DEFAULT FALSE
 );
-
-INSERT INTO transactions (title)
-VALUES
-  ('Christmas'),
-  ('Supermarket'),
-  ('Boutique'),
-  ('Rent');
-
 
 
 CREATE TABLE IF NOT EXISTS tags (
@@ -79,17 +60,6 @@ BEFORE INSERT OR UPDATE ON tags
 FOR EACH ROW
 EXECUTE FUNCTION check_tag_nesting_limit();
 
-INSERT INTO tags (tag_name, parent_tag)
-VALUES
-  ('Gift', NULL),
-  ('Food', NULL),
-  ('Apparel', NULL),
-  ('Rent', NULL),
-  ('Bank', NULL),
-  ('Fees', 5),
-  ('Interest', 5);
-
-
 
 CREATE TABLE IF NOT EXISTS deltas (
   id_d SERIAL PRIMARY KEY,
@@ -101,35 +71,12 @@ CREATE TABLE IF NOT EXISTS deltas (
   tag INTEGER REFERENCES tags (tag)
 );
 
-INSERT INTO deltas (subtitle, amount, id_a, tag, ts)
-VALUES
-  ('Parents', 10, 6, 1, '2025-12-24 20:00:00+01'),
-  ('Grandparents', 1, 1, 1, '2025-12-24 20:01:00+01'),
-  (NULL, -20, 1, 2, '2025-12-28 12:00:00+01'),
-  (NULL, -6.85,  6, 2, '2025-12-28 12:00:00+01'),
-  (NULL, -57,  4, 3, '2025-12-28 12:30:00+01'),
-  ('January', -100,  5, 4, '2026-01-01 09:00:00+01'),
-  ('January', -2.85,  5, 5, '2026-01-01 09:00:00+01'),
-  (NULL, -7.42, 6, 2, '2026-01-06 16:16:42+01');
-
-
 
 CREATE TABLE IF NOT EXISTS deltasPerTransaction (
   id_t INTEGER NOT NULL REFERENCES transactions (id_t),
   id_d INTEGER NOT NULL REFERENCES deltas (id_d),
   PRIMARY KEY (id_t, id_d)
 );
-
-INSERT INTO deltasPerTransaction (id_t, id_d)
-VALUES
-  (1, 1),
-  (1, 2),
-  (2, 3),
-  (2, 4),
-  (3, 5),
-  (4, 6),
-  (4, 7),
-  (2, 8);
 
 
 CREATE VIEW deltasWithBalance AS
@@ -146,7 +93,6 @@ SELECT
   ) AS balance_after
 FROM deltas d
 JOIN accounts a ON d.id_a = a.id_a;
-
 
 
 CREATE VIEW completeDeltaInfo AS
