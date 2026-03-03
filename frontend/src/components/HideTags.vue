@@ -18,7 +18,12 @@ const { tagsWithArchived, loadTags } = getData();
     toastName="Tag"
   >
     <template #default="{ item }">
-      {{ item.tag_name }}
+      <div class="flex items-center gap-1">
+        <span>{{ item.tag_name }}</span>
+        <span v-if="item.parent_name != ''" class="text-xs opacity-60">
+          ({{ item.parent_name }})
+        </span>
+      </div>
     </template>
   </HideList>
 </template>

@@ -130,13 +130,16 @@ const filterTags = (e) => {
     return;
   }
 
-  filteredTags.value = tags.value.filter((tagObj) =>
-    nonConsecutiveMatch(query, tagObj.tag_name),
+  filteredTags.value = tags.value.filter(
+    (tagObj) =>
+      nonConsecutiveMatch(query, `${tagObj.tag_name}${tagObj.parent_name}`) ||
+      nonConsecutiveMatch(query, `${tagObj.parent_name} ${tagObj.tag_name}`),
   );
 };
 const getTagLabel = (tagObj) => {
   if (!tagObj) return "";
-  return tagObj.tag_name;
+  if (tagObj.parent_name == "") return tagObj.tag_name;
+  return `${tagObj.tag_name} (${tagObj.parent_name})`;
 };
 
 // Focus on clear
@@ -430,7 +433,19 @@ const onFormSubmit = async ({ valid, states, reset }) => {
                 :optionLabel="getTagLabel"
                 dropdown
                 fluid
-              />
+              >
+                <template #option="{ option }">
+                  <div class="flex items-center gap-1">
+                    <span>{{ option.tag_name }}</span>
+                    <span
+                      v-if="option.parent_name != ''"
+                      class="text-xs opacity-60"
+                    >
+                      ({{ option.parent_name }})
+                    </span>
+                  </div>
+                </template>
+              </AutoComplete>
               <InputIcon
                 v-if="initialValues.tagObj"
                 class="pi pi-times cursor-pointer absolute right-12 top-1/2 -translate-y-1/2"

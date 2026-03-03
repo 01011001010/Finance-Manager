@@ -13,6 +13,9 @@ const accounts = computed(() =>
   accountsWithArchived.value.filter((a) => !a.hidden),
 );
 const tags = computed(() => tagsWithArchived.value.filter((t) => !t.hidden));
+const availableParentTags = computed(() =>
+  tagsWithArchived.value.filter((t) => t.parent === null),
+);
 
 export function getData() {
   const loadDeltas = async () => {
@@ -68,8 +71,9 @@ export function getData() {
 
     if (response.ok) {
       tagsWithArchived.value = (await response.json()).data;
-      // console.log('tags loaded');  // DEV
+      // console.log("tags loaded"); // DEV
       // console.log(tagsWithArchived.value);  // DEV
+      // console.log(availableParentTags);
     } else {
       tagsWithArchived.value = null;
       console.error(
@@ -107,6 +111,7 @@ export function getData() {
     accountsWithArchived,
     tags,
     tagsWithArchived,
+    availableParentTags,
     pinnedTransactions,
     selectedTransaction,
     loadDeltas,

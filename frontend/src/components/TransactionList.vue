@@ -11,6 +11,8 @@
 
           disable row selection for overview
 
+          change edit logic to native DataList edit options
+
           ...
 -->
 
@@ -203,6 +205,7 @@ if (!props.autoExpand) {
               >
                 <i
                   class="group-hover:opacity-0 transition-opacity duration-200"
+                  style="font-size: var(--p-button-sm-font-size)"
                   :class="
                     isPinned(slotProps.data)
                       ? 'pi pi-bookmark-fill'
@@ -211,6 +214,7 @@ if (!props.autoExpand) {
                 ></i>
                 <i
                   class="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  style="font-size: var(--p-button-sm-font-size)"
                   :class="
                     isPinned(slotProps.data)
                       ? 'pi pi-bookmark'

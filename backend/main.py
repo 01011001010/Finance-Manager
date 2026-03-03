@@ -1,3 +1,5 @@
+# TODO separate into multiple files, clean up
+
 import os
 from typing import Any
 from fastapi import FastAPI, HTTPException, status
@@ -60,6 +62,7 @@ class AddingDelta(BaseModel):
 
 class AddingTag(BaseModel):
     tag_name: str
+    parent: int | None = None
 
 
 class settingPin(BaseModel):
@@ -179,17 +182,22 @@ def addTag(payload: AddingTag) -> dict[str, str]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute("""INSERT INTO tags (tag_name)
-                               VALUES (%s)
+                cur.execute("""INSERT INTO tags (tag_name, parent_tag)
+                               VALUES (%s, %s)
                                RETURNING tag;""",
-                            (payload.tag_name,))
+                            (payload.tag_name, payload.parent))
                 (tag,) = cur.fetchone() or (None,)
 
                 return {"status": "ok",
-                        "detail": f"Tag {payload.tag_name} added under id {tag}"}
+                        "detail": (f"Tag {payload.tag_name} added under id {tag}, "
+                                   f"nested under id {payload.parent}")}
     except dbErrors.UniqueViolation:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail=f"Tag '{payload.tag_name}' already exists.")
+    except (dbErrors.IntegrityConstraintViolation, dbErrors.CheckViolation):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=("Non-cyclic nesting with max depth 1 violated. "
+                                    f"Tag '{payload.tag_name}' was not added."))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=str(e))
@@ -271,15 +279,22 @@ def getTags() -> dict[str, str | list[dict[str, Any]]]:
             with conn.cursor() as cur:
                 cur.execute("""SELECT t.tag,
                                       t.tag_name,
-                                      t.archived
+                                      t.archived,
+                                      t.parent_tag,
+                                      parent.tag_name
                                FROM tags t
-                               ORDER BY t.tag ASC;""")
+                               LEFT JOIN tags parent ON t.parent_tag = parent.tag
+                               ORDER BY t.parent_tag ASC NULLS FIRST, t.tag ASC;""")
                 rows = cur.fetchall()
         return {"status": "ok",
                 "data": [{"tag": tag,
                           "tag_name": name,
-                          "hidden": hidden}
-                         for tag, name, hidden in rows]}
+                          "hidden": hidden,
+                          "parent": parent_id,
+                          "parent_name": (parent_name
+                                          if parent_name is not None
+                                          else "")}
+                         for tag, name, hidden, parent_id, parent_name in rows]}
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,11 +1,8 @@
-<!-- TODO hierarchical tags (max one nested level)
-          - change DB infor about who nests under who (creation table accordingly) and then display (new transaction and tag hiding)
--->
-
 <script setup>
 import { ref, nextTick } from "vue";
 import { Form } from "@primevue/forms";
 import InputText from "primevue/inputtext";
+import Select from "primevue/select";
 import Button from "primevue/button";
 import Message from "primevue/message";
 import IftaLabel from "primevue/iftalabel";
@@ -20,12 +17,13 @@ import { getData, apiPost } from "@/composables/api";
 // Set-up
 const vFocustrap = FocusTrap;
 const { successToast, neutralToast, errorToast } = customToaster();
-const { loadTags } = getData();
+const { loadTags, availableParentTags } = getData();
 const { post } = apiPost();
 
 // Values
 const initialValues = ref({
   tag_name: "",
+  parent: null,
 });
 
 // Autofocus on clear
@@ -41,6 +39,7 @@ const clearError = async (formObj) => {
 
 // Resolver
 const resolver = ({ values }) => {
+  // TODO trim, ... (not just here)
   const errors = {};
   if (!values.tag_name) {
     errors.tag_name = [{ message: "Tag cannot be blank" }];
@@ -56,14 +55,17 @@ const onFormSubmit = async ({ valid, states, reset }) => {
   }
 
   const url = "/api/add/tag";
-  console.log(JSON.stringify(states)); //DEV
-  console.log(states.tag_name.value); //DEV
-  const payload = JSON.stringify({ tag_name: states.tag_name.value });
-  console.log(payload);
+  // console.log(JSON.stringify(states)); //DEV
+  // console.log(states.tag_name.value); //DEV
+  const payload = JSON.stringify({
+    tag_name: states.tag_name.value,
+    parent: states.parent?.value?.tag ?? null,
+  });
+  // console.log(payload); // DEV
   const response = await post(url, payload);
-  console.log(response); // DEV
+  // console.log(response); // DEV
   if (response.ok) {
-    console.log("ok Toast"); // DEV
+    // console.log("ok Toast"); // DEV
     successToast(`Tag '${states.tag_name.value}' added`);
     await loadTags();
     reset();
@@ -78,11 +80,11 @@ const onFormSubmit = async ({ valid, states, reset }) => {
       }
     }
   } else if (response.status === 409) {
-    console.log("duplicate warning Toast"); // DEV
+    // console.log("duplicate warning Toast"); // DEV
     neutralToast("Tag already exists");
     reset();
   } else {
-    console.log("something went wrong Toast"); // DEV
+    // console.log("something went wrong Toast"); // DEV
     errorToast("The tag could not be added");
   }
 };
@@ -129,6 +131,20 @@ const onFormSubmit = async ({ valid, states, reset }) => {
         >
           {{ $form.tag_name.error?.message }}
         </Message>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <IftaLabel>
+          <Select
+            name="parent"
+            :options="availableParentTags"
+            showClear
+            optionLabel="tag_name"
+            fluid
+            placeholder="Not nested"
+          />
+          <label for="parent" class="font-semibold">Nest under</label>
+        </IftaLabel>
       </div>
 
       <div class="flex gap-2">
