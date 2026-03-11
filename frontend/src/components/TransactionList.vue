@@ -26,6 +26,7 @@ import Column from "primevue/column";
 import { getData } from "@/composables/api";
 import { pinUtils } from "@/composables/pin";
 import { customToaster } from "@/composables/customToast";
+import { getFormatters } from "@/composables/formatting";
 
 const props = defineProps({
   dataSource: { type: String, required: true },
@@ -37,6 +38,7 @@ const { deltas, pinnedTransactions, transactionOverview, selectedTransaction } =
   getData();
 const { isPinned, togglePin } = pinUtils();
 const { successToast, neutralToast, errorToast } = customToaster();
+const { monoSpaceCurrency, formatDate } = getFormatters();
 
 const expandedRows = ref({});
 const items =
@@ -45,25 +47,6 @@ const items =
     : props.dataSource == "chronological"
       ? deltas
       : transactionOverview;
-
-// Data formatting
-const formatCurrency = (value, currency) => {
-  return value.toLocaleString("en-CH", {
-    style: "currency",
-    currency: currency,
-  });
-};
-const formatDate = (value) => {
-  if (!value) return "";
-
-  return new Intl.DateTimeFormat("en-CH", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-};
 
 // Row expansion and selection // TODO
 const onRowSelect = (event) => {
@@ -270,11 +253,14 @@ if (!props.autoExpand) {
             class="w-[14%] text-right pr-6 whitespace-nowrap"
           >
             <template #body="slotProps">
-              <span class="font-mono">
-                {{
-                  formatCurrency(slotProps.data.amount, slotProps.data.currency)
-                }}
-              </span>
+              <div
+                v-html="
+                  monoSpaceCurrency(
+                    slotProps.data.amount,
+                    slotProps.data.currency,
+                  )
+                "
+              ></div>
             </template>
           </Column>
           <Column field="account" class="w-[16%] pl-8 truncate"></Column>
@@ -283,14 +269,14 @@ if (!props.autoExpand) {
             class="w-[17%] text-right pr-6 whitespace-nowrap"
           >
             <template #body="slotProps">
-              <span class="font-mono">
-                {{
-                  formatCurrency(
+              <div
+                v-html="
+                  monoSpaceCurrency(
                     slotProps.data.balance_after,
                     slotProps.data.currency,
                   )
-                }}
-              </span>
+                "
+              ></div>
             </template>
           </Column>
           <Column field="ts" class="w-[20%] truncate">

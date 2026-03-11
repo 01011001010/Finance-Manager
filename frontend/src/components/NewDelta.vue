@@ -18,6 +18,7 @@ import Fieldset from "primevue/fieldset";
 // Custom utils
 import { customToaster } from "@/composables/customToast";
 import { getData, apiPost } from "@/composables/api";
+import { getFormatters } from "@/composables/formatting";
 
 // Set-up
 const vFocustrap = FocusTrap;
@@ -25,6 +26,7 @@ const { successToast, neutralToast, errorToast } = customToaster();
 const { accounts, tags, selectedTransaction, reloadLogTransactions } =
   getData();
 const { post } = apiPost();
+const { defaultLocale, getCurrencyPrefix } = getFormatters();
 
 // Values
 // Note: It is not advised to use Form v-slot with v-model for the individual inputs.
@@ -41,18 +43,22 @@ const emptyForm = () => ({
 const initialValues = ref(emptyForm());
 const resetForm = () => {
   initialValues.value = emptyForm();
+  numberInputContents.value = emptyForm().amount;
 };
 
 const formRef = ref(null);
+const numberInputContents = ref(null);
 const clearField = (formName, refName, value = null) => {
   initialValues.value[refName] = value;
   if (formRef.value) {
-    // console.log(formRef.value)  // DEV
     formRef.value.setFieldValue(formName, value);
+  }
+  if (formName == "amount" && refName == "amount") {
+    numberInputContents.value = value;
   }
 };
 const clearError = async (formObj) => {
-  if (formObj) {
+  if (formObj && (formObj != null || formObj != "")) {
     await nextTick();
     formObj.invalid = false;
     formObj.error = null;
@@ -336,27 +342,29 @@ const onFormSubmit = async ({ valid, states, reset }) => {
                 inputId="amount"
                 ref="amountInput"
                 v-model="initialValues.amount"
-                mode="currency"
+                mode="decimal"
                 autocomplete="off"
-                :currency="initialValues.accountObj?.currency || 'CHF'"
-                locale="en-CH"
+                :locale="defaultLocale"
+                :prefix="
+                  getCurrencyPrefix(initialValues.accountObj?.currency || 'CHF')
+                "
+                :minFractionDigits="2"
+                :maxFractionDigits="2"
+                :useGrouping="true"
                 fluid
-                @value-change="clearError($form.amount)"
                 @focus="onBalanceFocus"
-              />
-              <!-- BUG the form still freaks out with values over 1k with EUR, delimiters are the issue, GitHub issue comment posted-->
-              <!-- TODO @input="
+                @input="
                   (e) => {
-                    initialValues.amount = e.value;
+                    clearError($form.amount);
+                    numberInputContents = e.value;
                   }
                 "
-
-                is not ok, as it crashes with formatted values over 1k
-
-                update the v-if in the InputIcon below to monitor some other variable, that will be updates in @input -->
+              />
               <InputIcon
                 v-if="
-                  initialValues.amount !== 0.0 && initialValues.amount !== null
+                  numberInputContents !== 0.0 &&
+                  numberInputContents !== '' &&
+                  numberInputContents !== null
                 "
                 class="pi pi-times cursor-pointer"
                 @click="
