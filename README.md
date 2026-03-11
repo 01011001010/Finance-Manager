@@ -104,6 +104,7 @@ docker compose -f 'docker-compose.dev.yaml' down
     - [ ] Visual tweaks
     - [x] Account state tracking
 - [x] Production and development separation
+- [ ] Test implementation
 - [ ] Transaction data management
 - [ ] Advanced analytics display
 - [ ] Household inventory
