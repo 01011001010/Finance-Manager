@@ -19,7 +19,7 @@ const availableParentTags = computed(() =>
 
 export function getData() {
   const loadDeltas = async () => {
-    const response = await fetch("/api/data/deltas");
+    const response = await fetch("/api/finance/deltas");
 
     if (response.ok) {
       deltas.value = (await response.json()).data;
@@ -35,7 +35,7 @@ export function getData() {
   };
 
   const loadOverview = async () => {
-    const response = await fetch("/api/data/overview");
+    const response = await fetch("/api/finance/transactions/overview");
 
     if (response.ok) {
       transactionOverview.value = (await response.json()).data;
@@ -51,7 +51,7 @@ export function getData() {
   };
 
   const loadAccounts = async () => {
-    const response = await fetch("/api/data/accounts");
+    const response = await fetch("/api/finance/accounts");
 
     if (response.ok) {
       accountsWithArchived.value = (await response.json()).data;
@@ -67,7 +67,7 @@ export function getData() {
   };
 
   const loadTags = async () => {
-    const response = await fetch("/api/data/tags");
+    const response = await fetch("/api/finance/tags");
 
     if (response.ok) {
       tagsWithArchived.value = (await response.json()).data;
@@ -84,7 +84,7 @@ export function getData() {
   };
 
   const loadPinned = async () => {
-    const response = await fetch("/api/data/pinned");
+    const response = await fetch("/api/finance/transactions/pinned");
 
     if (response.ok) {
       pinnedTransactions.value = (await response.json()).data;

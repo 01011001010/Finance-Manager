@@ -54,7 +54,7 @@ const onFormSubmit = async ({ valid, states, reset }) => {
     return;
   }
 
-  const url = "/api/add/tag";
+  const url = "/api/finance/tags/add";
   // console.log(JSON.stringify(states)); //DEV
   // console.log(states.tag_name.value); //DEV
   const payload = JSON.stringify({

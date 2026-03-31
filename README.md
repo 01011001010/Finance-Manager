@@ -104,12 +104,18 @@ docker compose -f 'docker-compose.dev.yaml' down
     - [ ] Visual tweaks
     - [x] Account state tracking
 - [x] Production and development separation
-- [ ] Test implementation
+- [ ] Bulk import & export
+- [ ] Household inventory
+    - [x] Separate db Schemas and backend router
+    - [ ] Database architecture
+    - [ ] Frontend skeleton
+    - [ ] Frontend stock input
+    - [ ] Stock change controls (and logging)
+    - [ ] Stock display and restock alerts
+    - [ ] Food cost and nutrition log display
+- [ ] Implement testing
 - [ ] Transaction data management
 - [ ] Advanced analytics display
-- [ ] Household inventory
-    - [ ] Stock display and alerts
-    - [ ] Food cost and nutrition log
 - [ ] ...
 
 ## License

@@ -22,7 +22,7 @@ export function pinUtils() {
     //   `Transaction ${id} ${messagePrefix}pin started\nPayload: `,
     //   payload,
     // );
-    const response = await post("/api/update/pin", payload);
+    const response = await post("/api/finance/transactions/pin", payload);
     // console.log(response); // DEV
     if (response.ok) {
       // console.log("ok Toast"); // DEV

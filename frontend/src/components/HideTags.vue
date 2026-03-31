@@ -14,7 +14,7 @@ const { tagsWithArchived, loadTags } = getData();
     :items="tagsWithArchived"
     :loadFn="loadTags"
     itemID="tag"
-    apiUrl="/api/update/archive/tag"
+    apiUrl="/api/finance/tags/archive"
     toastName="Tag"
   >
     <template #default="{ item }">

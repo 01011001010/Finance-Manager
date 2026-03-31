@@ -211,8 +211,8 @@ const onFormSubmit = async ({ valid, states, reset }) => {
   }
 
   const url = selectedTransaction.value
-    ? "/api/add/delta"
-    : "/api/add/transaction";
+    ? "/api/finance/deltas/add"
+    : "/api/finance/transactions/add";
 
   const delta = {
     subtitle: states.subtitle.value,

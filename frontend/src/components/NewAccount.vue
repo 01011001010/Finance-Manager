@@ -118,7 +118,7 @@ const onFormSubmit = async ({ valid, states, reset }) => {
     return;
   }
 
-  const url = "/api/add/account";
+  const url = "/api/finance/accounts/add";
 
   const midnight = new Date(states.ts.value);
   midnight.setHours(0, 0, 0, 0);
