@@ -9,7 +9,7 @@
 
           Month row divider?
 
-          disable row selection for overview
+          prevent multi-expansion on repeated rows in overview
 
           change edit logic to native DataList edit options
 
@@ -121,7 +121,7 @@ if (!props.autoExpand) {
     :value="items"
     v-model:expandedRows="expandedRows"
     v-model:selection="selectedTransaction"
-    selectionMode="single"
+    :selectionMode="props.dataSource === 'overview' ? null : 'single'"
     :metaKeySelection="false"
     dataKey="id_t"
     scrollable
