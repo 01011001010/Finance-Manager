@@ -1,7 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 
+CREATE SCHEMA finance;
 
-CREATE TABLE IF NOT EXISTS accounts (
+CREATE TABLE IF NOT EXISTS finance.accounts (
   id_a SERIAL PRIMARY KEY,
   account TEXT NOT NULL,
   currency CHAR(3) NOT NULL,
@@ -12,22 +13,22 @@ CREATE TABLE IF NOT EXISTS accounts (
 );
 
 
-CREATE TABLE IF NOT EXISTS transactions (
+CREATE TABLE IF NOT EXISTS finance.transactions (
   id_t SERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   pinned BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 
-CREATE TABLE IF NOT EXISTS tags (
+CREATE TABLE IF NOT EXISTS finance.tags (
   tag SERIAL PRIMARY KEY,
   tag_name CITEXT NOT NULL,
   archived BOOLEAN NOT NULL DEFAULT FALSE,
-  parent_tag INTEGER DEFAULT NULL REFERENCES tags (tag),
+  parent_tag INTEGER DEFAULT NULL REFERENCES finance.tags (tag),
   CONSTRAINT unique_tag_per_parent UNIQUE NULLS NOT DISTINCT (tag_name, parent_tag)
 );
 
-CREATE OR REPLACE FUNCTION check_tag_nesting_limit()
+CREATE OR REPLACE FUNCTION finance.check_tag_nesting_limit()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Cannot be own parent
@@ -37,7 +38,7 @@ BEGIN
   IF NEW.parent_tag IS NOT NULL THEN
     -- Child cannot become parent
     IF EXISTS (SELECT 1
-               FROM tags
+               FROM finance.tags
                WHERE tag = NEW.parent_tag
                  AND parent_tag IS NOT NULL
     ) THEN
@@ -45,7 +46,7 @@ BEGIN
     END IF;
     -- Tag with children cannot change into a child
     IF EXISTS (SELECT 1
-               FROM tags
+               FROM finance.tags
                WHERE parent_tag = NEW.tag
     ) THEN
       RAISE EXCEPTION 'Invalid Nesting: Tag % is already a parent. It cannot be nested under another tag.', NEW.tag USING ERRCODE = 'integrity_constraint_violation';
@@ -56,30 +57,30 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_check_tag_nesting
-BEFORE INSERT OR UPDATE ON tags
+BEFORE INSERT OR UPDATE ON finance.tags
 FOR EACH ROW
-EXECUTE FUNCTION check_tag_nesting_limit();
+EXECUTE FUNCTION finance.check_tag_nesting_limit();
 
 
-CREATE TABLE IF NOT EXISTS deltas (
+CREATE TABLE IF NOT EXISTS finance.deltas (
   id_d SERIAL PRIMARY KEY,
   subtitle TEXT,
   ts_log TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ts TIMESTAMPTZ NOT NULL,
   amount NUMERIC(10, 2) NOT NULL,
-  id_a INTEGER NOT NULL REFERENCES accounts (id_a),
-  tag INTEGER REFERENCES tags (tag)
+  id_a INTEGER NOT NULL REFERENCES finance.accounts (id_a),
+  tag INTEGER REFERENCES finance.tags (tag)
 );
 
 
-CREATE TABLE IF NOT EXISTS deltasPerTransaction (
-  id_t INTEGER NOT NULL REFERENCES transactions (id_t),
-  id_d INTEGER NOT NULL REFERENCES deltas (id_d),
+CREATE TABLE IF NOT EXISTS finance.deltasPerTransaction (
+  id_t INTEGER NOT NULL REFERENCES finance.transactions (id_t),
+  id_d INTEGER NOT NULL REFERENCES finance.deltas (id_d),
   PRIMARY KEY (id_t, id_d)
 );
 
 
-CREATE VIEW deltasWithBalance AS
+CREATE VIEW finance.deltasWithBalance AS
 SELECT
   d.id_d,
   d.subtitle,
@@ -91,16 +92,16 @@ SELECT
   (a.opening_balance + SUM(d.amount) OVER (PARTITION BY d.id_a
                                              ORDER BY d.ts ASC, d.id_d ASC)
   ) AS balance_after
-FROM deltas d
-JOIN accounts a ON d.id_a = a.id_a;
+FROM finance.deltas d
+JOIN finance.accounts a ON d.id_a = a.id_a;
 
 
-CREATE VIEW completeDeltaInfo AS
+CREATE VIEW finance.completeDeltaInfo AS
 SELECT t.id_t,
        t.title,
        t.pinned,
        d.subtitle,
-       tags.tag_name,
+       ta.tag_name,
        d.id_d,
        d.amount,
        a.currency,
@@ -108,8 +109,8 @@ SELECT t.id_t,
        d.ts,
        d.ts_log,
        d.balance_after
-FROM transactions t
-JOIN deltasPerTransaction dt ON dt.id_t = t.id_t
-JOIN deltasWithBalance d ON d.id_d = dt.id_d
-JOIN accounts a ON a.id_a = d.id_a
-LEFT JOIN tags ON tags.tag = d.tag;
+FROM finance.transactions t
+JOIN finance.deltasPerTransaction dt ON dt.id_t = t.id_t
+JOIN finance.deltasWithBalance d ON d.id_d = dt.id_d
+JOIN finance.accounts a ON a.id_a = d.id_a
+LEFT JOIN finance.tags ta ON ta.tag = d.tag;

@@ -1,4 +1,4 @@
-INSERT INTO accounts (account, currency, opening_balance)
+INSERT INTO finance.accounts (account, currency, opening_balance)
 VALUES
   ('Cash', 'EUR', 50),
   ('Cash', 'CHF', 150),
@@ -8,7 +8,7 @@ VALUES
   ('Bank', 'EUR', 200);
 
 
-INSERT INTO transactions (title)
+INSERT INTO finance.transactions (title)
 VALUES
   ('Christmas'),
   ('Supermarket'),
@@ -16,7 +16,7 @@ VALUES
   ('Rent');
 
 
-INSERT INTO tags (tag_name, parent_tag)
+INSERT INTO finance.tags (tag_name, parent_tag)
 VALUES
   ('Gift', NULL),
   ('Food', NULL),
@@ -27,7 +27,7 @@ VALUES
   ('Interest', 5);
 
 
-INSERT INTO deltas (subtitle, amount, id_a, tag, ts)
+INSERT INTO finance.deltas (subtitle, amount, id_a, tag, ts)
 VALUES
   ('Parents', 10, 6, 1, '2025-12-24 20:00:00+01'),
   ('Grandparents', 1, 1, 1, '2025-12-24 20:01:00+01'),
@@ -39,7 +39,7 @@ VALUES
   (NULL, -7.42, 6, 2, '2026-01-06 16:16:42+01');
 
 
-INSERT INTO deltasPerTransaction (id_t, id_d)
+INSERT INTO finance.deltasPerTransaction (id_t, id_d)
 VALUES
   (1, 1),
   (1, 2),

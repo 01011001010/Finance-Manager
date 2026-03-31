@@ -91,14 +91,15 @@ def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
         with dbSession() as conn:
             with conn.cursor() as cur:
                 # 1. Insert transaction
-                cur.execute("""INSERT INTO transactions (title)
+                cur.execute("""INSERT INTO finance.transactions (title)
                                VALUES (%s)
                                RETURNING id_t;""",
                             (payload.title,))
                 (id_t,) = cur.fetchone() or (None,)
 
                 # 2. Insert delta
-                cur.execute("""INSERT INTO deltas (ts, amount, id_a, tag, subtitle)
+                cur.execute("""INSERT INTO finance.deltas (ts, amount, id_a, tag,
+                                                           subtitle)
                                VALUES (%s, %s, %s, %s, %s)
                                RETURNING id_d;""",
                             (payload.delta.ts,
@@ -109,7 +110,7 @@ def addNewTransaction(payload: TransactionWithDelta) -> dict[str, str]:
                 (id_d,) = cur.fetchone() or (None,)
 
                 # 3. Link delta to transaction
-                cur.execute("""INSERT INTO deltasPerTransaction (id_t, id_d)
+                cur.execute("""INSERT INTO finance.deltasPerTransaction (id_t, id_d)
                                VALUES (%s, %s);""",
                             (id_t, id_d))
 
@@ -127,7 +128,8 @@ def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
         with dbSession() as conn:
             with conn.cursor() as cur:
                 # 1. Insert delta
-                cur.execute("""INSERT INTO deltas (ts, amount, id_a, tag, subtitle)
+                cur.execute("""INSERT INTO finance.deltas (ts, amount, id_a, tag,
+                                                           subtitle)
                                VALUES (%s, %s, %s, %s, %s)
                                RETURNING id_d;""",
                             (payload.delta.ts,
@@ -138,7 +140,7 @@ def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
                 (id_d,) = cur.fetchone() or (None,)
 
                 # 2. Link delta to transaction
-                cur.execute("""INSERT INTO deltasPerTransaction (id_t, id_d)
+                cur.execute("""INSERT INTO finance.deltasPerTransaction (id_t, id_d)
                                VALUES (%s, %s);""",
                             (payload.id_t, id_d))
 
@@ -156,8 +158,8 @@ def addAccount(payload: AddingAccount) -> dict[str, str]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute("""INSERT INTO accounts (account, currency, opened_ts,
-                                                     opening_balance)
+                cur.execute("""INSERT INTO finance.accounts (account, currency,
+                                                             opened_ts, opening_balance)
                                VALUES (%s, %s, %s, %s)
                                RETURNING id_a;""",
                             (payload.name, payload.currency, payload.ts,
@@ -182,7 +184,7 @@ def addTag(payload: AddingTag) -> dict[str, str]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute("""INSERT INTO tags (tag_name, parent_tag)
+                cur.execute("""INSERT INTO finance.tags (tag_name, parent_tag)
                                VALUES (%s, %s)
                                RETURNING tag;""",
                             (payload.tag_name, payload.parent))
@@ -207,7 +209,7 @@ def archive(table: str, col: str, id: int, newState: bool, name: str) -> dict[st
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                query = SQL("""UPDATE {tbl}
+                query = SQL("""UPDATE finance.{tbl}
                             SET archived = %s
                             WHERE {col} = %s;""").format(
                     tbl=Identifier(table),
@@ -237,7 +239,7 @@ def setPin(payload: settingPin) -> dict[str, str]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute("""UPDATE transactions
+                cur.execute("""UPDATE finance.transactions
                                SET pinned = %s
                                WHERE id_t = %s;""", (payload.newPin, payload.id_t))
                 un = "" if payload.newPin else "un"
@@ -257,7 +259,7 @@ def getAccounts() -> dict[str, str | list[dict[str, Any]]]:
                                       a.currency,
                                       a.account,
                                       a.archived
-                               FROM accounts a
+                               FROM finance.accounts a
                                ORDER BY a.id_a ASC;""")
                 rows = cur.fetchall()
 
@@ -281,9 +283,9 @@ def getTags() -> dict[str, str | list[dict[str, Any]]]:
                                       t.tag_name,
                                       t.archived,
                                       t.parent_tag,
-                                      parent.tag_name
-                               FROM tags t
-                               LEFT JOIN tags parent ON t.parent_tag = parent.tag
+                                      paren.tag_name
+                               FROM finance.tags t
+                               LEFT JOIN finance.tags paren ON t.parent_tag = paren.tag
                                ORDER BY t.parent_tag ASC NULLS FIRST, t.tag ASC;""")
                 rows = cur.fetchall()
         return {"status": "ok",
@@ -318,7 +320,7 @@ def getPinned() -> dict[str, str | list[Any]]:
                                       ts,
                                       ts_log,
                                       balance_after
-                               FROM completeDeltaInfo
+                               FROM finance.completeDeltaInfo
                                WHERE pinned
                                ORDER BY ts DESC;""")
                 rows = cur.fetchall()
@@ -365,7 +367,7 @@ def getTransactionOverview() -> dict[str, str | list[Any]]:
                                       ts,
                                       ts_log,
                                       balance_after
-                               FROM completeDeltaInfo
+                               FROM finance.completeDeltaInfo
                                ORDER BY ts DESC;""")
                 rows = cur.fetchall()
 
@@ -416,7 +418,7 @@ def getDeltaLog() -> dict[str, str | list[Any]]:
                                       ts,
                                       ts_log,
                                       balance_after
-                               FROM completeDeltaInfo
+                               FROM finance.completeDeltaInfo
                                ORDER BY ts DESC;""")
                 rows = cur.fetchall()
 

@@ -13,7 +13,7 @@ services:
       TZ: Europe/Zurich
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
-      - ./database/init_schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/init_fin_schema.sql:/docker-entrypoint-initdb.d/01_fin_init.sql
     ports:
       - "5432:5432"
     healthcheck:  # TODO complex healthcheck that tests db/table existence
