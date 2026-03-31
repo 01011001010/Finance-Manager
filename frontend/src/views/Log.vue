@@ -1,14 +1,8 @@
 <!-- TODO
-pinned transaction (and Overview.vue) should have different delta grouping and transaction order (backend change needed)
-
 possibly allow during application setup to choose the default
   -> currency (new accounts)
   -> formatting
   -> ...
-
-log list styling
-  -> group if neighbouring are the same transaction??
-  -> pinned transactions hide deltas into a rolldown (see PrimeVue Tree)
 -->
 
 <script setup>
