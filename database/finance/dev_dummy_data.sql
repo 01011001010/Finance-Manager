@@ -1,11 +1,11 @@
-INSERT INTO finance.accounts (account, currency, opening_balance)
+INSERT INTO finance.accounts (account, currency)
 VALUES
-  ('Cash', 'EUR', 50),
-  ('Cash', 'CHF', 150),
-  ('Online bank', 'GBP', 50),
-  ('Online bank', 'CHF', 500),
-  ('Bank', 'CHF', 100),
-  ('Bank', 'EUR', 200);
+  ('Cash', 'EUR'),
+  ('Cash', 'CHF'),
+  ('Online bank', 'GBP'),
+  ('Online bank', 'CHF'),
+  ('Bank', 'CHF'),
+  ('Bank', 'EUR');
 
 
 INSERT INTO finance.transactions (title)
@@ -13,7 +13,8 @@ VALUES
   ('Christmas'),
   ('Supermarket'),
   ('Boutique'),
-  ('Rent');
+  ('Rent'),
+  ('Opening balance');
 
 
 INSERT INTO finance.tags (tag_name, parent_tag)
@@ -36,7 +37,13 @@ VALUES
   (NULL, -57,  4, 3, '2025-12-28 12:30:00+01'),
   ('January', -100,  5, 4, '2026-01-01 09:00:00+01'),
   ('January', -2.85,  5, 5, '2026-01-01 09:00:00+01'),
-  (NULL, -7.42, 6, 2, '2026-01-06 16:16:42+01');
+  (NULL, -7.42, 6, 2, '2026-01-06 16:16:42+01'),
+  (NULL,50,1,NULL,'2000-01-01 05:00:00+01'),
+  (NULL,200,2,NULL,'2000-01-01 05:00:00+01'),
+  (NULL,50,3,NULL,'2000-01-01 05:00:00+01'),
+  (NULL,1000,4,NULL,'2000-01-01 05:00:00+01'),
+  (NULL,700,5,NULL,'2000-01-01 05:00:00+01'),
+  (NULL,800,6,NULL,'2000-01-01 05:00:00+01');
 
 
 INSERT INTO finance.deltasPerTransaction (id_t, id_d)
@@ -48,4 +55,10 @@ VALUES
   (3, 5),
   (4, 6),
   (4, 7),
-  (2, 8);
+  (2, 8),
+  (5, 9),
+  (5, 10),
+  (5, 11),
+  (5, 12),
+  (5, 13),
+  (5, 14);

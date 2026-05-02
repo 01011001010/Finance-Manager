@@ -6,8 +6,6 @@ CREATE TABLE IF NOT EXISTS finance.accounts (
   id_a SERIAL PRIMARY KEY,
   account TEXT NOT NULL,
   currency CHAR(3) NOT NULL,
-  opening_balance NUMERIC(10, 2) NOT NULL DEFAULT 0,
-  opened_ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   archived BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT unique_account_details UNIQUE (account, currency)
 );
@@ -66,6 +64,7 @@ CREATE TABLE IF NOT EXISTS finance.deltas (
   id_d SERIAL PRIMARY KEY,
   subtitle TEXT,
   ts_log TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ts_analytics TIMESTAMPTZ DEFAULT NULL,
   ts TIMESTAMPTZ NOT NULL,
   amount NUMERIC(10, 2) NOT NULL,
   id_a INTEGER NOT NULL REFERENCES finance.accounts (id_a),
@@ -89,9 +88,7 @@ SELECT
   d.amount,
   d.id_a,
   d.tag,
-  (a.opening_balance + SUM(d.amount) OVER (PARTITION BY d.id_a
-                                             ORDER BY d.ts ASC, d.id_d ASC)
-  ) AS balance_after
+  SUM(d.amount) OVER (PARTITION BY d.id_a ORDER BY d.ts ASC, d.id_d ASC) AS balance_after
 FROM finance.deltas d
 JOIN finance.accounts a ON d.id_a = a.id_a;
 

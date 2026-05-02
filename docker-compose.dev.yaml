@@ -13,8 +13,10 @@ services:
       TZ: Europe/Zurich
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
-      - ./database/init_fin_schema.sql:/docker-entrypoint-initdb.d/01_fin_init.sql
-      - ./database/dev_fin_data_seed.sql:/docker-entrypoint-initdb.d/02_fin_dummy_data.sql
+      - ./database/finance/schema.sql:/docker-entrypoint-initdb.d/01_fin_init.sql
+      - ./database/finance/dev_dummy_data.sql:/docker-entrypoint-initdb.d/02_fin_dummy_data.sql
+      - ./database/household/schema.sql:/docker-entrypoint-initdb.d/01_storage_init.sql
+      - ./database/household/dev_dummy_data.sql:/docker-entrypoint-initdb.d/02_storage_dummy_data.sql
     ports:
       - "5432:5432"
     healthcheck:  # TODO complex healthcheck that tests db/table existence
