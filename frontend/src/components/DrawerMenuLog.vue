@@ -2,63 +2,49 @@
 import { ref } from "vue";
 import Drawer from "primevue/drawer";
 import Menubar from "primevue/menubar";
+import Panel from "primevue/panel";
+import ScrollPanel from "primevue/scrollpanel";
 
 // Custom components
 import NewTag from "@/components/NewTag.vue";
 import NewAccount from "@/components/NewAccount.vue";
 import HideAccounts from "@/components/HideAccounts.vue";
 import HideTags from "@/components/HideTags.vue";
+// import BulkUpload from "@/components/BulkUpload.vue";
 
 // Drawer states
-const showTagAddPanel = ref(false);
-const showAccountAddPanel = ref(false);
-const showTagHidePanel = ref(false);
-const showAccountHidePanel = ref(false);
+const showBulkDataPanel = ref(false);
+const showTagPanel = ref(false);
+const showAccountPanel = ref(false);
 
 // Menu items
 const setupItems = ref([
   {
-    label: "Tags",
-    icon: "pi pi-tags",
-    items: [
-      {
-        label: "Add",
-        icon: "pi pi-plus",
-        command: async () => {
-          showTagAddPanel.value = true;
-        },
-      },
-      {
-        label: "Hide",
-        icon: "pi pi-eye-slash",
-        command: () => {
-          showTagHidePanel.value = true;
-        },
-      },
-    ],
+    label: "Accounts",
+    icon: "pi pi-wallet",
+    command: async () => {
+      showAccountPanel.value = true;
+    },
   },
   {
     separator: true,
   },
   {
-    label: "Accounts",
-    icon: "pi pi-wallet",
-    items: [
-      {
-        label: "Add",
-        icon: "pi pi-plus",
-        command: async () => {
-          showAccountAddPanel.value = true;
-        },
-      },
-      {
-        label: "Hide",
-        icon: "pi pi-eye-slash",
-        command: () => {
-          showAccountHidePanel.value = true;
-        },
-      },
-    ],
+    label: "Tags",
+    icon: "pi pi-tags",
+    command: async () => {
+      showTagPanel.value = true;
+    },
+  },
+  {
+    separator: true,
+  },
+  {
+    label: "Bulk Import",
+    icon: "pi pi-file-arrow-up",
+    command: async () => {
+      showBulkDataPanel.value = true;
+    },
   },
 ]);
 </script>
@@ -69,38 +55,60 @@ const setupItems = ref([
   </Teleport>
 
   <Drawer
-    v-model:visible="showTagAddPanel"
-    header="Add Tags"
+    v-model:visible="showAccountPanel"
     position="right"
+    :blockScroll="true"
     class="w-full sm:w-96"
   >
-    <NewTag />
+    <template #container="{ closeCallback }">
+      <div class="w-full h-full flex flex-col gap-4 p-4">
+        <div class="flex-none">
+          <Panel header="Add Accounts">
+            <NewAccount />
+          </Panel>
+        </div>
+        <div class="flex-1 min-h-0">
+          <ScrollPanel style="width: 100%; height: 100%">
+            <Panel header="Hide Accounts">
+              <HideAccounts />
+            </Panel>
+          </ScrollPanel>
+        </div>
+      </div>
+    </template>
   </Drawer>
 
   <Drawer
-    v-model:visible="showAccountAddPanel"
-    header="Add Accounts"
+    v-model:visible="showTagPanel"
     position="right"
+    :blockScroll="true"
     class="w-full sm:w-96"
   >
-    <NewAccount />
+    <template #container="{ closeCallback }">
+      <div class="w-full h-full flex flex-col gap-4 p-4">
+        <div class="flex-none">
+          <Panel header="Add Tags">
+            <NewTag />
+          </Panel>
+        </div>
+        <div class="flex-1 min-h-0">
+          <ScrollPanel style="width: 100%; height: 100%">
+            <Panel header="Hide Tags">
+              <HideTags />
+            </Panel>
+          </ScrollPanel>
+        </div>
+      </div>
+    </template>
   </Drawer>
 
   <Drawer
-    v-model:visible="showAccountHidePanel"
-    header="Hide Accounts"
+    v-model:visible="showBulkDataPanel"
+    header="Bulk data import"
     position="right"
+    :blockScroll="true"
     class="w-full sm:w-96"
   >
-    <HideAccounts />
-  </Drawer>
-
-  <Drawer
-    v-model:visible="showTagHidePanel"
-    header="Hide Tags"
-    position="right"
-    class="w-full sm:w-96"
-  >
-    <HideTags />
+    <!-- <BulkUpload /> -->
   </Drawer>
 </template>
