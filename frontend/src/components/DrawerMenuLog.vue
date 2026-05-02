@@ -68,11 +68,16 @@ const setupItems = ref([
           </Panel>
         </div>
         <div class="flex-1 min-h-0">
-          <ScrollPanel style="width: 100%; height: 100%">
-            <Panel header="Hide Accounts">
-              <HideAccounts />
-            </Panel>
-          </ScrollPanel>
+          <Panel
+            header="Hide Accounts"
+            class="h-full flex flex-col"
+            :pt="{
+              contentContainer: { class: 'flex-grow min-h-0' },
+              content: { class: 'h-full' },
+            }"
+          >
+            <HideAccounts />
+          </Panel>
         </div>
       </div>
     </template>
@@ -92,11 +97,16 @@ const setupItems = ref([
           </Panel>
         </div>
         <div class="flex-1 min-h-0">
-          <ScrollPanel style="width: 100%; height: 100%">
-            <Panel header="Hide Tags">
-              <HideTags />
-            </Panel>
-          </ScrollPanel>
+          <Panel
+            header="Hide Tags"
+            class="h-full flex flex-col"
+            :pt="{
+              contentContainer: { class: 'flex-grow min-h-0' },
+              content: { class: 'h-full' },
+            }"
+          >
+            <HideTags />
+          </Panel>
         </div>
       </div>
     </template>

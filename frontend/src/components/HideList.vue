@@ -52,92 +52,56 @@ const toggle = async (item) => {
 </script>
 
 <template>
-  <div class="card h-full flex justify-center p-2">
-    <ScrollPanel class="w-full h-full p-1 border-none">
-      <DataTable :value="items" size="small" :showHeaders="false">
-        <Column>
-          <template #body="{ data }">
-            <span
-              :class="
-                data.hidden
-                  ? 'text-surface-300 dark:text-surface-600'
-                  : 'text-surface-600 dark:text-surface-300'
-              "
-              ><slot :item="data">
-                {{ data.tag_name || data.account }}
-              </slot></span
-            >
-          </template>
-        </Column>
-        <Column class="text-right pr-4">
-          <template #body="{ data }">
-            <Button
-              severity="secondary"
-              variant="text"
-              size="small"
-              rounded
-              class="group"
-              @click="toggle(data)"
-            >
-              <template #icon>
-                <div
-                  class="relative w-full h-full flex items-center justify-center"
-                >
-                  <i
-                    class="group-hover:opacity-0 transition-opacity duration-200"
-                    :class="data.hidden ? 'pi pi-eye-slash' : 'pi pi-eye'"
-                  ></i>
-                  <i
-                    class="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    :class="data.hidden ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                  ></i>
-                </div>
-              </template>
-            </Button>
-          </template>
-        </Column>
-      </DataTable>
-
-      <!-- DEV second option with boxes instead of DataTable rows -->
-      <!-- <div class="w-full flex flex-col gap-1">
-        <div
-          v-for="item in items"
-          :key="item[itemID]"
-          class="flex items-center justify-between p-1 pl-2 rounded-lg bg-surface-50 dark:bg-surface-800"
-        >
+  <div class="h-full flex-1 flex flex-col min-h-0">
+    <DataTable
+      :value="items"
+      scrollable
+      scrollHeight="flex"
+      size="small"
+      :showHeaders="false"
+      class="flex-1"
+    >
+      <Column>
+        <template #body="{ data }">
           <span
-            :class="item.hidden
-              ? 'text-surface-300 dark:text-surface-600'
-              : 'text-surface-600 dark:text-surface-300'"
+            :class="
+              data.hidden
+                ? 'text-surface-300 dark:text-surface-600'
+                : 'text-surface-600 dark:text-surface-300'
+            "
+            ><slot :item="data">
+              {{ data.tag_name || data.account }}
+            </slot></span
           >
-            <slot :item="item">
-              {{ item.tag_name || item.account }}
-            </slot>
-          </span>
-
+        </template>
+      </Column>
+      <Column class="text-right pr-4">
+        <template #body="{ data }">
           <Button
             severity="secondary"
             variant="text"
             size="small"
             rounded
             class="group"
-            @click="toggle(item)"
+            @click="toggle(data)"
           >
             <template #icon>
-              <div class="relative w-full h-full flex items-center justify-center">
+              <div
+                class="relative w-full h-full flex items-center justify-center"
+              >
                 <i
                   class="group-hover:opacity-0 transition-opacity duration-200"
-                  :class="item.hidden ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                  :class="data.hidden ? 'pi pi-eye-slash' : 'pi pi-eye'"
                 ></i>
                 <i
                   class="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  :class="item.hidden ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                  :class="data.hidden ? 'pi pi-eye' : 'pi pi-eye-slash'"
                 ></i>
               </div>
             </template>
           </Button>
-        </div>
-      </div> -->
-    </ScrollPanel>
+        </template>
+      </Column>
+    </DataTable>
   </div>
 </template>
