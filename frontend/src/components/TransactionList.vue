@@ -10,6 +10,7 @@
           Month row divider?
 
           prevent multi-expansion on repeated rows in overview
+           -> TODO TODAY: vue also complains about duplicate keys, use some deltasGroupId
 
           change edit logic to native DataList edit options
 

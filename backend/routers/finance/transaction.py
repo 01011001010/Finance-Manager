@@ -1,6 +1,6 @@
 from typing import Any
 from fastapi import APIRouter, HTTPException, status
-# from psycopg2 import errors as dbErrors  # move away from general Exceptions
+# from psycopg2 import errors as dbErrors  # TODO move away from general Exceptions
 from models.finance import TransactionWithDelta, settingPin
 from db import dbSession
 

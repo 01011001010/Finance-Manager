@@ -100,6 +100,7 @@ export function getData() {
   };
 
   const reloadLogTransactions = async () => {
+    // TODO possibly change pinned logic -> only deltas reload and pinned is a watcher of pinned id_t and the deltas
     await loadDeltas();
     await loadPinned();
   };

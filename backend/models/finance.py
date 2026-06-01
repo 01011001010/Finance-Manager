@@ -5,6 +5,11 @@ from datetime import datetime
 # TODO implement more validation
 
 
+# TODO TODAY implement analytics_ts
+#  -> backend transaction/delta creation
+#  -> anywhere the db deltas table is read
+#  -> transaction adding form
+#  -> bulk upload DONE (but not the internally called function from backend services)
 class DeltaIn(BaseModel):
     ts: datetime  # ISO date from frontend
     subtitle: str | None = None

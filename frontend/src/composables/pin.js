@@ -1,4 +1,4 @@
-// TODO change the whole pinned logic into a boolean in the transition table, not a separate table
+// TODO TODAY change the whole pinned logic into a boolean in the transition table, not a separate table
 
 // Custom utils
 import { customToaster } from "@/composables/customToast";
@@ -27,7 +27,7 @@ export function pinUtils() {
     if (response.ok) {
       // console.log("ok Toast"); // DEV
       successToast(`Transaction ${messagePrefix}pinned`);
-      await reloadLogTransactions(); // TODO unnecessary full load, think about separating the list of pinned id_t
+      await reloadLogTransactions(); // TODO TODAY unnecessary full load, think about separating the list of pinned id_t
     } else {
       // console.log("something went wrong Toast"); // DEV
       // console.log(response);
