@@ -1,9 +1,11 @@
 from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from psycopg2 import errors as dbErrors
-from psycopg2.sql import SQL, Identifier
-from models.finance import AddingTag, Archiving
+
+# Custom imports
 from db import dbSession
+from models.finance import AddingTag, Archiving
+from services import archive
 
 
 router = APIRouter(prefix="/tags", tags=["Finance - Tags"])
@@ -37,28 +39,17 @@ def addTag(payload: AddingTag) -> dict[str, str]:
                             detail=str(e))
 
 
-def archive(table: str, col: str, id: int, newState: bool, name: str) -> dict[str, str]:
+@router.post("/archive")  # finance/tags/archive
+def archiveTag(payload: Archiving) -> dict[str, str]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                query = SQL("""UPDATE finance.{tbl}
-                            SET archived = %s
-                            WHERE {col} = %s;""").format(
-                    tbl=Identifier(table),
-                    col=Identifier(col)
-                )
-                cur.execute(query, (newState, id))
-                message = "archived" if newState else "restored"
-                return {"status": "ok",
-                        "detail": f"{name} {id} {message}"}
+                return archive("tags", "tag", "Tag", payload, cur)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=str(e))
-
-
-@router.post("/archive")  # finance/tags/archive
-def archiveTag(payload: Archiving) -> dict[str, str]:
-    return archive("tags", "tag", payload.id, payload.newArchivedState, "Tag")
 
 
 @router.get("")  # finance/tags
