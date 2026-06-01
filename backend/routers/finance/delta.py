@@ -3,35 +3,18 @@ from fastapi import APIRouter, HTTPException, status
 # from psycopg2 import errors as dbErrors  # move away from general Exceptions
 from models.finance import AddingDelta
 from db import dbSession
+from services import addDeltaToExistingTransaction
 
 
 router = APIRouter(prefix="/deltas", tags=["Finance - Deltas"])
 
 
 @router.post("/add")  # finance/deltas/add
-def addDeltaToExistingTransaction(payload: AddingDelta) -> dict[str, str]:
+def addDelta(payload: AddingDelta) -> dict[str, str]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                # 1. Insert delta
-                cur.execute("""INSERT INTO finance.deltas (ts, amount, id_a, tag,
-                                                           subtitle)
-                               VALUES (%s, %s, %s, %s, %s)
-                               RETURNING id_d;""",
-                            (payload.delta.ts,
-                             payload.delta.amount,
-                             payload.delta.id_a,
-                             payload.delta.tag,
-                             payload.delta.subtitle))
-                (id_d,) = cur.fetchone() or (None,)
-
-                # 2. Link delta to transaction
-                cur.execute("""INSERT INTO finance.deltasPerTransaction (id_t, id_d)
-                               VALUES (%s, %s);""",
-                            (payload.id_t, id_d))
-
-                return {"status": "ok",
-                        "detail": f"Transaction {payload.id_t} linked to delta {id_d}"}
+                return addDeltaToExistingTransaction(payload, cur)
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
