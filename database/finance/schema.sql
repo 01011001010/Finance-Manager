@@ -17,6 +17,13 @@ CREATE TABLE IF NOT EXISTS finance.transactions (
   pinned BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+INSERT INTO finance.transactions (title, id_t)
+VALUES
+  ('Account opening balance', 1);  -- special id_t
+
+-- Advance the internal key sequence to continue from 10 on the next insert
+SELECT setval(pg_get_serial_sequence('finance.transactions', 'id_t'), 9);
+
 
 CREATE TABLE IF NOT EXISTS finance.tags (
   tag SERIAL PRIMARY KEY,

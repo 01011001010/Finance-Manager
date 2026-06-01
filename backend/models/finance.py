@@ -1,10 +1,12 @@
 from pydantic import BaseModel, field_validator
 from re import search, fullmatch
+from pydantic_extra_types.currency_code import ISO4217
+from datetime import datetime
 # TODO implement more validation
 
 
 class DeltaIn(BaseModel):
-    ts: str  # ISO date from frontend
+    ts: datetime  # ISO date from frontend
     subtitle: str | None = None
     amount: float
     id_a: int
@@ -52,10 +54,19 @@ class settingPin(BaseModel):
 
 
 class AddingAccount(BaseModel):
-    ts: str  # ISO date from frontend
+    ts: datetime  # ISO date from frontend
     name: str
-    currency: str
+    currency: ISO4217
     balance: float
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        # TODO more complex check in desired
+        value = value.strip()
+        if not value:
+            raise ValueError("Account name is required and cannot be blank")
+        return value
 
 
 class Archiving(BaseModel):

@@ -13,8 +13,7 @@ VALUES
   ('Christmas'),
   ('Supermarket'),
   ('Boutique'),
-  ('Rent'),
-  ('Opening balance');
+  ('Rent');
 
 
 INSERT INTO finance.tags (tag_name, parent_tag)
@@ -48,17 +47,17 @@ VALUES
 
 INSERT INTO finance.deltasPerTransaction (id_t, id_d)
 VALUES
-  (1, 1),
-  (1, 2),
-  (2, 3),
-  (2, 4),
-  (3, 5),
-  (4, 6),
-  (4, 7),
-  (2, 8),
-  (5, 9),
-  (5, 10),
-  (5, 11),
-  (5, 12),
-  (5, 13),
-  (5, 14);
+  (10, 1),
+  (10, 2),
+  (11, 3),
+  (11, 4),
+  (12, 5),
+  (13, 6),
+  (13, 7),
+  (11, 8),
+  (1, 9),
+  (1, 10),
+  (1, 11),
+  (1, 12),
+  (1, 13),
+  (1, 14);

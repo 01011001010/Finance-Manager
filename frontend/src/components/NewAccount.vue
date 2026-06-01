@@ -20,7 +20,7 @@ import { getFormatters } from "@/composables/formatting";
 // Set-up
 const vFocustrap = FocusTrap;
 const { successToast, neutralToast, errorToast } = customToaster();
-const { loadAccounts } = getData();
+const { loadAccounts, reloadLogTransactions } = getData();
 const { post } = apiPost();
 const { defaultLocale, getCurrencyPrefix } = getFormatters();
 
@@ -83,8 +83,6 @@ const onBalanceFocus = (event) => {
 
 // Resolver
 const resolver = ({ values }) => {
-  console.log("RESOLVER"); // DEV
-  console.log(values); // DEV
   const errors = {};
 
   if (!values.name?.trim()) {
@@ -98,8 +96,10 @@ const resolver = ({ values }) => {
   if (!values.currency) {
     errors.currency = [{ message: "Currency is required" }];
   } else if (
-    values.currency.length === 3 &&
-    !allCurrencies.includes(values.currency.toUpperCase())
+    !(
+      values.currency.length === 3 &&
+      allCurrencies.includes(values.currency.toUpperCase())
+    )
   ) {
     errors.currency = [{ message: "Invalid currency code" }];
   }
@@ -124,20 +124,18 @@ const onFormSubmit = async ({ valid, states, reset }) => {
   midnight.setHours(0, 0, 0, 0);
 
   const payload = {
-    name: states.name.value,
-    currency: states.currency.value,
+    name: (states.name.value || "").trim(),
+    currency: (states.currency.value || "").trim().toUpperCase(),
     balance: states.balance.value,
     ts: midnight.toISOString(),
   };
 
-  // console.log(payload); // DEV
   const response = await post(url, JSON.stringify(payload));
-  // console.log(response); // DEV
 
   if (response.ok) {
-    // console.log("ok Toast"); // DEV
     successToast(`Account '${payload.name} (${payload.currency})' added`);
     await loadAccounts();
+    await reloadLogTransactions(); // reload chronological delta log as well as pinned (if initial balance special transaction is pinned, without this special load it would not show)
     resetForm();
     reset();
     await nextTick();
@@ -146,7 +144,7 @@ const onFormSubmit = async ({ valid, states, reset }) => {
         nameInput.value.$el?.querySelector("input") ||
         nameInput.value.$el ||
         nameInput.value;
-      if (inputRef.focus === "function") {
+      if (typeof inputRef.focus === "function") {
         inputRef.focus();
       }
     }
