@@ -39,10 +39,28 @@ const clearError = async (formObj) => {
 
 // Resolver
 const resolver = ({ values }) => {
-  // TODO trim, ... (not just here)
   const errors = {};
-  if (!values.tag_name) {
+  const trimmedTag = (values.tag_name || "").trim();
+
+  // Blank tag
+  if (!trimmedTag) {
     errors.tag_name = [{ message: "Tag cannot be blank" }];
+    return { errors };
+  }
+
+  // Explicit ban of / and \
+  if (/[/\\]/.test(trimmedTag)) {
+    errors.tag_name = [
+      { message: "'/'' and '\\' are reserved and cannot be part of a tag" },
+    ];
+    return { errors };
+  }
+
+  // General check for allowed characters
+  if (!/^[a-zA-Z0-9\s.,&\-]+$/.test(trimmedTag)) {
+    errors.tag_name = [
+      { message: "Only letters, numbers, spaces, and [ , . & - ] are allowed" },
+    ];
   }
   return { errors };
 };
@@ -58,7 +76,7 @@ const onFormSubmit = async ({ valid, states, reset }) => {
   // console.log(JSON.stringify(states)); //DEV
   // console.log(states.tag_name.value); //DEV
   const payload = JSON.stringify({
-    tag_name: states.tag_name.value,
+    tag_name: states.tag_name.value?.trim(),
     parent: states.parent?.value?.tag ?? null,
   });
   // console.log(payload); // DEV
@@ -75,7 +93,7 @@ const onFormSubmit = async ({ valid, states, reset }) => {
         tagInput.value.$el?.querySelector("input") ||
         tagInput.value.$el ||
         tagInput.value;
-      if (inputRef.focus === "function") {
+      if (typeof inputRef.focus === "function") {
         inputRef.focus();
       }
     }

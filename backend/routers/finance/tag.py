@@ -23,6 +23,8 @@ def addTag(payload: AddingTag) -> dict[str, str]:
                 return {"status": "ok",
                         "detail": (f"Tag {payload.tag_name} added under id {tag}, "
                                    f"nested under id {payload.parent}")}
+    except HTTPException:
+        raise
     except dbErrors.UniqueViolation:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail=f"Tag '{payload.tag_name}' already exists.")
