@@ -1,5 +1,7 @@
 import os
+from typing import Generator
 import psycopg2 as dbAdapter
+from psycopg2.extensions import connection
 from contextlib import contextmanager
 
 
@@ -13,7 +15,7 @@ DB_HOST = os.getenv("DB_HOST")
 assert DB_HOST is not None, "Backend container missing DB_HOST value"
 
 
-def connectToDB():
+def connectToDB() -> connection:
     return dbAdapter.connect(
         host=DB_HOST,
         database=DB,
@@ -23,7 +25,7 @@ def connectToDB():
 
 
 @contextmanager
-def dbSession():
+def dbSession() -> Generator[connection, None, None]:
     conn = connectToDB()
     try:
         yield conn
