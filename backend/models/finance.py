@@ -12,6 +12,7 @@ from datetime import datetime
 #  -> bulk upload DONE (but not the internally called function from backend services)
 class DeltaIn(BaseModel):
     ts: datetime  # ISO date from frontend
+    analytics_ts: datetime | None = None  # ISO date from frontend
     subtitle: str | None = None
     amount: float
     id_a: int

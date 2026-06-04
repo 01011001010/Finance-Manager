@@ -30,7 +30,7 @@ def getDeltaLog() -> dict[str, str | list[Any]]:
                                       title,
                                       pinned,
                                       subtitle,
-                                      tag_name,
+                                      full_tag_name,
                                       id_d,
                                       amount,
                                       currency,

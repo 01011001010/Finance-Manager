@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS finance.transactions (
 INSERT INTO finance.transactions (title, id_t)
 VALUES
   ('Account opening balance', 1);  -- special id_t
+  -- TODO idea: have a separate table, and provide a combined view, but separate inserts
 
 -- Advance the internal key sequence to continue from 10 on the next insert
 SELECT setval(pg_get_serial_sequence('finance.transactions', 'id_t'), 9);
@@ -66,6 +67,16 @@ BEFORE INSERT OR UPDATE ON finance.tags
 FOR EACH ROW
 EXECUTE FUNCTION finance.check_tag_nesting_limit();
 
+CREATE VIEW finance.tagsWithFullName AS  -- TODO rename this to tags, and original tags to some raw tags
+SELECT
+    t.tag,
+    t.tag_name,
+    t.archived,
+    t.parent_tag,
+    COALESCE(parent.tag_name || ' / ' || t.tag_name, t.tag_name) AS full_tag_name
+FROM finance.tags t
+LEFT JOIN finance.tags parent ON t.parent_tag = parent.tag;
+
 
 CREATE TABLE IF NOT EXISTS finance.deltas (
   id_d SERIAL PRIMARY KEY,
@@ -92,6 +103,7 @@ SELECT
   d.subtitle,
   d.ts_log,
   d.ts,
+  d.ts_analytics,
   d.amount,
   d.id_a,
   d.tag,
@@ -105,16 +117,18 @@ SELECT t.id_t,
        t.title,
        t.pinned,
        d.subtitle,
-       ta.tag_name,
+       ta.full_tag_name,
        d.id_d,
        d.amount,
+       a.id_a,
        a.currency,
        a.account,
        d.ts,
        d.ts_log,
+       d.ts_analytics,
        d.balance_after
 FROM finance.transactions t
 JOIN finance.deltasPerTransaction dt ON dt.id_t = t.id_t
 JOIN finance.deltasWithBalance d ON d.id_d = dt.id_d
 JOIN finance.accounts a ON a.id_a = d.id_a
-LEFT JOIN finance.tags ta ON ta.tag = d.tag;
+LEFT JOIN finance.tagsWithFullName ta ON ta.tag = d.tag;
