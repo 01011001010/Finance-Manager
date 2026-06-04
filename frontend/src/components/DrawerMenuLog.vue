@@ -10,7 +10,8 @@ import NewTag from "@/components/NewTag.vue";
 import NewAccount from "@/components/NewAccount.vue";
 import HideAccounts from "@/components/HideAccounts.vue";
 import HideTags from "@/components/HideTags.vue";
-// import BulkUpload from "@/components/BulkUpload.vue";
+import BulkUpload from "@/components/BulkUpload.vue";
+import BulkDownload from "@/components/BulkDownload.vue";
 
 // Drawer states
 const showBulkDataPanel = ref(false);
@@ -40,7 +41,7 @@ const setupItems = ref([
     separator: true,
   },
   {
-    label: "Bulk Import",
+    label: "Import & Export",
     icon: "pi pi-file-arrow-up",
     command: async () => {
       showBulkDataPanel.value = true;
@@ -114,11 +115,23 @@ const setupItems = ref([
 
   <Drawer
     v-model:visible="showBulkDataPanel"
-    header="Bulk data import"
     position="right"
     :blockScroll="true"
     class="w-full sm:w-96"
   >
-    <!-- <BulkUpload /> -->
+    <template #container="{ closeCallback }">
+      <div class="w-full h-full flex flex-col gap-4 p-4">
+        <div class="flex-none">
+          <Panel header="Export">
+            <BulkDownload />
+          </Panel>
+        </div>
+        <div class="flex-1">
+          <Panel header="Import">
+            <BulkUpload />
+          </Panel>
+        </div>
+      </div>
+    </template>
   </Drawer>
 </template>

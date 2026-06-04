@@ -105,9 +105,11 @@ docker compose -f 'docker-compose.dev.yaml' down
     - [x] Account state tracking
 - [x] Production and development separation
 - [ ] Bulk import & export
+    - [x] Export
+    - [ ] Import
 - [ ] Household inventory
     - [x] Separate db Schemas and backend router
-    - [ ] Database architecture
+    - [ ] Database schema
     - [ ] Frontend skeleton
     - [ ] Frontend stock input
     - [ ] Stock change controls (and logging)

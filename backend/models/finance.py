@@ -24,6 +24,11 @@ class TransactionWithDelta(BaseModel):
     delta: DeltaIn
 
 
+class TransactionWithMultipleDeltas(BaseModel):
+    title: str
+    deltas: list[DeltaIn]
+
+
 class AddingDelta(BaseModel):
     id_t: int
     delta: DeltaIn
