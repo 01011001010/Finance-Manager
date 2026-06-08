@@ -37,6 +37,7 @@ class AddingDelta(BaseModel):
 class AddingTag(BaseModel):
     tag_name: str
     parent: int | None = None
+    archived: bool = False
 
     @field_validator("tag_name")
     @classmethod

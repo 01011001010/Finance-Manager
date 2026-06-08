@@ -5,7 +5,7 @@ from psycopg2 import errors as dbErrors
 # Custom imports
 from db import dbSession
 from models.finance import AddingTag, Archiving
-from services import archive
+from services import archive, addNewTag
 
 
 router = APIRouter(prefix="/tags", tags=["Finance - Tags"])
@@ -16,20 +16,15 @@ def addTag(payload: AddingTag) -> dict[str, str]:
     try:
         with dbSession() as conn:
             with conn.cursor() as cur:
-                cur.execute("""INSERT INTO finance.tags (tag_name, parent_tag)
-                               VALUES (%s, %s)
-                               RETURNING tag;""",
-                            (payload.tag_name, payload.parent))
-                (tag,) = cur.fetchone() or (None,)
+                ID = addNewTag(payload, cur)
+                if ID is None:
+                    raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                        detail=f"Tag '{payload.tag_name}' already "
+                                               "exists.")
+        return {"status": "ok",
+                "detail": f"Tag {payload.tag_name} added under ID {ID}, nested under ID"
+                          f" {payload.parent}"}
 
-                return {"status": "ok",
-                        "detail": (f"Tag {payload.tag_name} added under id {tag}, "
-                                   f"nested under id {payload.parent}")}
-    except HTTPException:
-        raise
-    except dbErrors.UniqueViolation:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=f"Tag '{payload.tag_name}' already exists.")
     except (dbErrors.IntegrityConstraintViolation, dbErrors.CheckViolation):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                             detail=("Non-cyclic nesting with max depth 1 violated. "

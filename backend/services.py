@@ -1,10 +1,8 @@
 from psycopg2.extensions import cursor
 from psycopg2.sql import SQL, Identifier
-from fastapi import HTTPException
 
 # Custom imports
-from db import dbSession
-from models.finance import AddingDelta, Archiving
+from models.finance import AddingDelta, AddingTag, Archiving
 from models.finance import TransactionWithMultipleDeltas
 
 
@@ -17,6 +15,15 @@ from models.finance import TransactionWithMultipleDeltas
 #      appropriate Exception types
 #       -> minimal catch all
 #       -> no HTTPException should be intercepted and changed
+
+def addNewTag(payload: AddingTag, cur: cursor) -> int | None:
+    cur.execute("""INSERT INTO finance.tags (tag_name, parent_tag, archived)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (tag_name, parent_tag) DO NOTHING
+                   RETURNING tag;""",
+                (payload.tag_name, payload.parent, payload.archived))
+    (tag,) = cur.fetchone() or (None,)
+    return tag
 
 
 def addNewTransactionWithMultipleDeltas(payload: TransactionWithMultipleDeltas,
@@ -50,41 +57,26 @@ def addNewTransactionWithMultipleDeltas(payload: TransactionWithMultipleDeltas,
     return len(payload.deltas)
 
 
-def getAccountIdDict() -> dict[tuple[str, str], int]:
-    # TODO try to do this without a separate session
-    try:
-        with dbSession() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""SELECT a.id_a,
-                                    a.currency,
-                                    a.account
-                            FROM finance.accounts a
-                            ORDER BY a.id_a ASC;""")
-                rows = cur.fetchall()
+def getAccountIdDict(cur: cursor) -> dict[tuple[str, str], int]:
+    cur.execute("""SELECT a.id_a,
+                          a.currency,
+                          a.account
+                   FROM finance.accounts a
+                   ORDER BY a.id_a ASC;""")
+    rows = cur.fetchall()
 
-        return {(accountName, currency): int(id_a)
-                for id_a, currency, accountName in rows}
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error during load of account IDs.")
+    return {(accountName, currency): int(id_a) for id_a, currency, accountName in rows}
 
 
-def getTagIdDict() -> dict[tuple[str, str], int]:
-    # TODO try to do this without a separate session
-    try:
-        with dbSession() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""SELECT t.tag,
-                                    t.tag_name,
-                                    paren.tag_name
-                            FROM finance.tags t
-                            LEFT JOIN finance.tags paren ON t.parent_tag = paren.tag
-                            ORDER BY t.parent_tag ASC NULLS FIRST, t.tag ASC;""")
-                rows = cur.fetchall()
-        return {(parent_name or '', tag): int(tag_id)
-                for tag_id, tag, parent_name in rows}
-
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error during load of tag IDs.")
+def getTagIdDict(cur: cursor) -> dict[tuple[str, str], int]:
+    cur.execute("""SELECT t.tag,
+                          t.tag_name,
+                          paren.tag_name
+                   FROM finance.tags t
+                   LEFT JOIN finance.tags paren ON t.parent_tag = paren.tag
+                   ORDER BY t.parent_tag ASC NULLS FIRST, t.tag ASC;""")
+    rows = cur.fetchall()
+    return {(parent_name or '', tag): int(tag_id) for tag_id, tag, parent_name in rows}
 
 
 def addDeltaToExistingTransaction(payload: AddingDelta, cur: cursor) -> dict[str, str]:
