@@ -4,23 +4,43 @@ from csv import DictReader, writer as CSVwriter
 from zipfile import ZipFile, ZIP_DEFLATED
 from io import BytesIO, StringIO
 from datetime import datetime
-# from psycopg2 import errors as dbErrors  # TODO move away from catch-all Exceptions
+from psycopg2 import errors as dbErrors
 
 # Custom imports
 from db import dbSession
-from services import addNewTransactionWithMultipleDeltas, getAccountIdDict, getTagIdDict
-from models.finance import TransactionWithMultipleDeltas, DeltaIn
+from services import addNewTag, addNewTransactionWithMultipleDeltas
+from services import getAccountIdDict, getTagIdDict
+from utils import parseTagString
+from models.finance import AddingTag, TransactionWithMultipleDeltas, DeltaIn
 
 
 router = APIRouter(prefix="/bulk", tags=["Finance - Bulk data operations"])
 
+requiredHeadersTransactions = {"Title": "title", "Subtitle": "subtitle",
+                               "Amount": "amount", "Currency": "currency", "Tag": "tag",
+                               "Timestamp": "timestamp", "Account": "account"}
+optionalHeadersTransactions = {"AnalyticsTs": "analyticstimestamp"}
+assert all(isinstance(value, str) and value.islower()
+           for value in requiredHeadersTransactions.values()
+           ), "DEV ERROR: Required headers (transactions) should be lowercase strings"
+assert all(isinstance(value, str) and value.islower()
+           for value in optionalHeadersTransactions.values()
+           ), "DEV ERROR: Optional headers (transactions) should be lowercase strings"
+
+requiredHeadersTags = {"Tag": "tag"}
+optionalHeadersTags = {"Archived": "archived"}
+assert all(isinstance(value, str) and value.islower()
+           for value in requiredHeadersTags.values()
+           ), "DEV ERROR: Required headers (tags) should be lowercase strings"
+assert all(isinstance(value, str) and value.islower()
+           for value in optionalHeadersTags.values()
+           ), "DEV ERROR: Optional headers (tags) should be lowercase strings"
+
 
 @router.post("/upload/transactions")
 def uploadTransactions(file: UploadFile) -> dict[str, str]:
-    # TODO implement case insensitivity for headers
-    requiredHeaders = {"Title": "Title", "Subtitle": "Subtitle", "Currency": "Currency",
-                       "Amount": "Amount", "Tag": "Tag", "Timestamp": "Timestamp",
-                       "AnalyticsTs": "AnalyticsTimestamp", "Account": "Account"}
+    requiredHeaders = requiredHeadersTransactions
+    optionalHeaders = optionalHeadersTransactions
 
     # Check and parse uploaded csv file
     if file.filename is None or not file.filename.endswith(".csv"):
@@ -36,13 +56,22 @@ def uploadTransactions(file: UploadFile) -> dict[str, str]:
                                 detail="The uploaded CSV file is empty or missing a "
                                        "header row.")
 
-        if missingHeaders := set(requiredHeaders.values()) - set(reader.fieldnames):
+        reader.fieldnames = [name.lower() for name in reader.fieldnames]
+
+        if missingFields := (set(requiredHeaders.values()) - set(reader.fieldnames)):
             raise HTTPException(status_code=422,
                                 detail="CSV is missing these required headers: "
-                                       f"{', '.join(sorted(missingHeaders))}")
+                                       f"{', '.join(sorted(missingFields))}.")
 
-        tagIds = getTagIdDict()
-        accountIds = getAccountIdDict()
+        # Load account and tag IDs
+        try:
+            with dbSession() as conn:
+                with conn.cursor() as cur:
+                    tagIds = getTagIdDict(cur)
+                    accountIds = getAccountIdDict(cur)
+        except Exception:
+            raise HTTPException(status_code=500,
+                                detail="Error during load of tag or account IDs.")
 
         currentTitle = ""
         deltas = []
@@ -56,11 +85,6 @@ def uploadTransactions(file: UploadFile) -> dict[str, str]:
                 currentTitle = row[requiredHeaders["Title"]]
                 deltas = []
 
-            # Parse the tag string
-            # -> assumes parent_tag/child_tag or simply tag
-            tag, subTag = map(str.strip,
-                              ('/' + row[requiredHeaders["Tag"]]).split('/')[-2:])
-
             # Fetch account ID
             id_a = accountIds.get((row[requiredHeaders["Account"]],
                                    row[requiredHeaders["Currency"]]), None)
@@ -70,18 +94,24 @@ def uploadTransactions(file: UploadFile) -> dict[str, str]:
                                            f" ({row[requiredHeaders['Currency']]})' not"
                                            " found.")
 
+            # Parse the tag string
+            # -> assumes parent_tag/child_tag or simply tag
+            tag, subTag = parseTagString(row[requiredHeaders["Tag"]])
+
             # Fetch tag ID
             id_tag = tagIds.get((tag, subTag), None)
             if id_tag is None and (tag != "" or subTag != ""):  # Tag not found
                 # TODO possibly just add the tag (or give the choice), currently aborts
                 raise HTTPException(status_code=422,
                                     detail=f"Tag '{'/'.join(((tag, subTag)))}' "
-                                           f"not found.")
+                                           f"not found")
 
             # Create the delta with translated literals into IDs
             try:
                 ts = datetime.fromisoformat(row[requiredHeaders["Timestamp"]])
-                ts_a = datetime.fromisoformat(row[requiredHeaders["AnalyticsTs"]])
+                ts_a = (datetime.fromisoformat(row[optionalHeaders["AnalyticsTs"]])
+                        if optionalHeaders["AnalyticsTs"] in row
+                        else None)
                 amount = float(row[requiredHeaders["Amount"]])
             except ValueError as e:
                 raise HTTPException(status_code=422,
@@ -108,7 +138,7 @@ def uploadTransactions(file: UploadFile) -> dict[str, str]:
         # Catch all
         # TODO specify further (see dbErrors import)
         raise HTTPException(status_code=500,
-                            detail=f"Error during read of the csv file: {e}")
+                            detail=f"Error during read of the csv file: {e}.")
         # note: 500 is not too bad, if the db is not working as is should.
         #       If the contents of the payload are not ok, if should be 422
     finally:
@@ -122,11 +152,12 @@ def uploadTransactions(file: UploadFile) -> dict[str, str]:
                                   for payload
                                   in payloads])
 
-                return {"status": "ok",
-                        "detail": (f"Added {len(payloads)} transactions containing "
-                                   f"{deltaCount} deltas")}
+        return {"status": "ok",
+                "detail": (f"Added {len(payloads)} transactions containing {deltaCount}"
+                           " deltas.")}
     except Exception as e:
-        # TODO specify further (see dbErrors import)
+        # Catch all
+        # TODO specify further if possible
         raise HTTPException(status_code=500, detail=str(e))
         # note: 500 is not too bad, if the db is not working as is should.
         #       If the contents of the payload are not ok, if should be 422
@@ -135,13 +166,16 @@ def uploadTransactions(file: UploadFile) -> dict[str, str]:
 
 @router.post("/upload/tags")
 def uploadTags(file: UploadFile) -> dict[str, str]:
-    requiredHeaders = {"tag": "tag"}
+    requiredHeaders = requiredHeadersTags
+    optionalHeaders = optionalHeadersTags
 
     # Check and parse uploaded csv file
     if file.filename is None or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=422, detail="Please upload a CSV file.")
 
-    # payloads = []
+    payloads = []
+    queuedTopLevelTags = set()
+    addInTheSecondRound = []
     try:
         reader = DictReader(StringIO(file.file.read().decode("utf-8-sig")))
         # "utf-8-sig" due to BOM from e.g. Excel
@@ -151,14 +185,41 @@ def uploadTags(file: UploadFile) -> dict[str, str]:
                                 detail="The uploaded CSV file is empty or missing a "
                                        "header row.")
 
-        if missing_headers := set(requiredHeaders.values()) - set(reader.fieldnames):
+        reader.fieldnames = [name.lower() for name in reader.fieldnames]
+
+        if missingFields := (set(requiredHeaders.values()) - set(reader.fieldnames)):
             raise HTTPException(status_code=422,
                                 detail="CSV is missing these required headers: "
-                                       f"{', '.join(sorted(missing_headers))}")
+                                       f"{', '.join(sorted(missingFields))}")
 
-        # TODO implement file parsing
-        raise HTTPException(status_code=404,
-                            detail="Not implemented yet.")
+        # Load tag IDs
+        try:
+            with dbSession() as conn:
+                with conn.cursor() as cur:
+                    tagIds = getTagIdDict(cur)
+        except Exception:
+            raise HTTPException(status_code=500, detail="Error during load of tag IDs.")
+
+        for row in reader:
+            tag, subTag = parseTagString(row[requiredHeaders["Tag"]])
+            archived = (bool(row[optionalHeaders["Archived"]])
+                        if optionalHeaders["Archived"] in row
+                        else False)
+
+            if tag == "":  # Adding a top-level tag
+                if subTag not in queuedTopLevelTags:
+                    payloads.append(AddingTag(tag_name=subTag, archived=archived))
+                    queuedTopLevelTags.add(subTag)
+            elif tag in tagIds:  # Adding a subTag to an existing tag
+                payloads.append(AddingTag(tag_name=subTag,
+                                          parent=tagIds.get(("", tag), None),
+                                          archived=archived))
+            else:  # Add top-level tag and mark subTag to add after
+                if tag not in queuedTopLevelTags:
+                    payloads.append(AddingTag(tag_name=tag, archived=archived))
+                    queuedTopLevelTags.add(tag)
+                addInTheSecondRound.append((tag, subTag, archived))
+
     except HTTPException:
         # Let through HTTPExceptions
         raise
@@ -169,32 +230,66 @@ def uploadTags(file: UploadFile) -> dict[str, str]:
                                    "valid UTF-8 text CSV.")
     except Exception as e:
         # Catch all
-        # TODO specify further (see dbErrors import)
+        # TODO specify further if possible
         raise HTTPException(status_code=500,
-                            detail=f"Error during read of the csv file: {e}")
+                            detail=f"Error during read of the csv file: {e}.")
         # note: 500 is not too bad, if the db is not working as is should.
         #       If the contents of the payload are not ok, if should be 422
     finally:
         file.file.close()
 
-    # TODO implement database commit
+    if not payloads:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=("No tags specified in the CSV file."))
+
     # Commit parsed tags into the database
-    # try:
-    #     with dbSession() as conn:
-    #         with conn.cursor() as cur:
-    #             # TODO
+    addedTags = 0
+    failedTags = []
 
-    #             return {"status": "ok",
-    #                     "detail": (f"Added {len(payloads)} tags")}
-    # except Exception as e:
-    #     # TODO specify further (see dbErrors import)
-    #     raise HTTPException(status_code=500, detail=str(e))
-    #     # note: 500 is not too bad, if the db is not working as is should.
-    #     #       If the contents of the payload are not ok, if should be 422
-    #     #         -> e.g. incorrect timestamp 2026-04-03 09:75:38+01 should be 422
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+
+                # Simple cases (adding only one tag per CSV entry)
+                for payload in payloads:
+                    ID = addNewTag(payload, cur)
+                    if ID is not None:
+                        addedTags += 1
+                    else:
+                        failedTags.append((payload))
+
+                if addInTheSecondRound:  # Complex cases (nested with fresh parent)
+                    # Reload IDs to include newly added
+                    # TODO consider logging created IDs instead
+                    tagIds = getTagIdDict(cur)
+
+                    for tag, subTag, archived in addInTheSecondRound:
+                        payload = AddingTag(tag_name=subTag,
+                                            parent=tagIds.get(("", tag), None),
+                                            archived=archived)
+                        ID = addNewTag(payload, cur)
+                        if ID is not None:
+                            addedTags += 1
+                        else:
+                            failedTags.append(payload)
+
+        return {"status": "ok",
+                "detail": f"Tags added: {addedTags}; Tags that already existed: "
+                          f"{len(failedTags)}.",
+                "failed": repr(failedTags)}
+
+    except (dbErrors.IntegrityConstraintViolation, dbErrors.CheckViolation):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail="Non-cyclic nesting with max depth 1 violated. Most "
+                                   "likely a bug in the code.")
+    except Exception as e:
+        # Catch all
+        # TODO specify further if possible
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
-@router.post("/upload/accounts")
+@router.post("/upload/accounts")  # TODO TODAY
 def uploadAccounts(file: UploadFile) -> dict[str, str]:
     requiredHeaders = {"account": "account", "currency": "currency",
                        "initialBalance": "initialBalance", "openingDate": "openingDate"}
@@ -216,7 +311,7 @@ def uploadAccounts(file: UploadFile) -> dict[str, str]:
         if missing_headers := set(requiredHeaders.values()) - set(reader.fieldnames):
             raise HTTPException(status_code=422,
                                 detail="CSV is missing these required headers: "
-                                       f"{', '.join(sorted(missing_headers))}")
+                                       f"{', '.join(sorted(missing_headers))}.")
 
         # TODO implement file parsing
         raise HTTPException(status_code=404,
@@ -231,9 +326,9 @@ def uploadAccounts(file: UploadFile) -> dict[str, str]:
                                    "valid UTF-8 text CSV.")
     except Exception as e:
         # Catch all
-        # TODO specify further (see dbErrors import)
+        # TODO specify further if possible
         raise HTTPException(status_code=500,
-                            detail=f"Error during read of the csv file: {e}")
+                            detail=f"Error during read of the csv file: {e}.")
         # note: 500 is not too bad, if the db is not working as is should.
         #       If the contents of the payload are not ok, if should be 422
     finally:
@@ -249,7 +344,8 @@ def uploadAccounts(file: UploadFile) -> dict[str, str]:
     #             return {"status": "ok",
     #                     "detail": (f"Added {len(payloads)} accounts")}
     # except Exception as e:
-    #     # TODO specify further (see dbErrors import)
+    #     # Catch all
+    #     # TODO specify further if possible
     #     raise HTTPException(status_code=500, detail=str(e))
     #     # note: 500 is not too bad, if the db is not working as is should.
     #     #       If the contents of the payload are not ok, if should be 422
@@ -261,60 +357,6 @@ def uploadZip(file: UploadFile) -> dict[str, str]:
     # TODO implement everything
     raise HTTPException(status_code=404,
                         detail="Not implemented yet.")
-    # requiredHeaders = {"account": "account", "currency": "currency",
-    #                    "initialBalance": "initialBalance", "openingDate":
-    #                    "openingDate"}
-
-    # # Check and parse uploaded csv file
-    # if file.filename is None or not file.filename.endswith(".csv"):
-    #     raise HTTPException(status_code=422, detail="Please upload a CSV file.")
-
-    # # payloads = []
-    # try:
-    #     reader = DictReader(StringIO(file.file.read().decode("utf-8-sig")))
-    #     # "utf-8-sig" due to BOM from e.g. Excel
-
-    #     if not reader.fieldnames:
-    #         raise HTTPException(status_code=422,
-    #                             detail="The uploaded CSV file is empty or missing a "
-    #                                    "header row.")
-
-    #     if missing_headers := set(requiredHeaders.values()) - set(reader.fieldnames):
-    #         raise HTTPException(status_code=422,
-    #                             detail="CSV is missing these required headers: "
-    #                                    f"{', '.join(sorted(missing_headers))}")
-
-    #     raise HTTPException(status_code=404,
-    #                         detail="Not implemented yet.")
-    # except HTTPException:
-    #     # Let through HTTPExceptions
-    #     raise
-    # except UnicodeDecodeError:
-    # # Catches cases where someone uploads a completely incompatible files e.g. .xlsx
-    #     raise HTTPException(status_code=422,
-    #                         detail="File encoding error. Please ensure the file is a "
-    #                                "valid UTF-8 text CSV.")
-    # except Exception as e:
-    #     # Catch all
-    #     raise HTTPException(status_code=500,
-    #                         detail=f"Error during read of the csv file: {e}")
-    #     # note: 500 is not too bad, if the db is not working as is should.
-    #     #       If the contents of the payload are not ok, if should be 422
-    # finally:
-    #     file.file.close()
-
-    # # Commit parsed accounts into the database
-    # # try:
-    # #     with dbSession() as conn:
-    # #         with conn.cursor() as cur:
-
-    # #             return {"status": "ok",
-    # #                     "detail": (f"Added {len(payloads)} accounts")}
-    # # except Exception as e:
-    # #     raise HTTPException(status_code=500, detail=str(e))
-    # #     # note: 500 is not too bad, if the db is not working as is should.
-    # #     #       If the contents of the payload are not ok, if should be 422
-    # #     #         -> e.g. incorrect timestamp 2026-04-03 09:75:38+01 should be 422
 
 
 @router.get("/download")
@@ -408,5 +450,7 @@ def export_zip() -> StreamingResponse:
                                                                  '.zip"'})
 
     except Exception as e:
+        # Catch all
+        # TODO specify further if possible
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=str(e))
