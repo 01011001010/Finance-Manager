@@ -89,6 +89,7 @@ watch(selectedTransaction, async (newTransaction) => {
 });
 
 // Dropdown filtering
+// BUG MINOR: typed:'eaooo', matched: 'Accommodation (Travel)'
 const nonConsecutiveMatch = (query, text) => {
   // Escape special characters and create a pattern: "a.*b.*c.*d"
   const pattern = query
