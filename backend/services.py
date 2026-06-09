@@ -27,6 +27,7 @@ def addNewTag(payload: AddingTag, cur: cursor) -> int | None:
 
 
 def addNewAccount(payload: AddingAccount, cur: cursor) -> tuple[int | None, str]:
+    # TODO implement optional timestamp, if value is 0 (also in bulk)
     # 1. Insert account info
     cur.execute("""INSERT INTO finance.accounts (account, currency)
                    VALUES (%s, %s)

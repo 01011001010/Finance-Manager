@@ -5,16 +5,19 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from io import BytesIO, StringIO
 from datetime import datetime
 from psycopg2 import errors as dbErrors
+from pydantic_extra_types.currency_code import ISO4217
 
 # Custom imports
 from db import dbSession
-from services import addNewTag, addNewTransactionWithMultipleDeltas
+from services import addNewAccount, addNewTag, addNewTransactionWithMultipleDeltas
 from services import getAccountIdDict, getTagIdDict
 from utils import parseTagString
-from models.finance import AddingTag, TransactionWithMultipleDeltas, DeltaIn
+from models.finance import AddingAccount, AddingTag, DeltaIn
+from models.finance import TransactionWithMultipleDeltas
 
 
 router = APIRouter(prefix="/bulk", tags=["Finance - Bulk data operations"])
+
 
 requiredHeadersTransactions = {"Title": "title", "Subtitle": "subtitle",
                                "Amount": "amount", "Currency": "currency", "Tag": "tag",
@@ -26,6 +29,17 @@ assert all(isinstance(value, str) and value.islower()
 assert all(isinstance(value, str) and value.islower()
            for value in optionalHeadersTransactions.values()
            ), "DEV ERROR: Optional headers (transactions) should be lowercase strings"
+
+requiredHeadersAccounts = {"account": "account", "currency": "currency",
+                           "openingDate": "openingdate"}
+optionalHeadersAccounts = {"initialBalance": "initialbalance"}
+assert all(isinstance(value, str) and value.islower()
+           for value in requiredHeadersAccounts.values()
+           ), "DEV ERROR: Required headers (accounts) should be lowercase strings"
+assert all(isinstance(value, str) and value.islower()
+           for value in optionalHeadersAccounts.values()
+           ), "DEV ERROR: Optional headers (accounts) should be lowercase strings"
+
 
 requiredHeadersTags = {"Tag": "tag"}
 optionalHeadersTags = {"Archived": "archived"}
@@ -103,14 +117,15 @@ def uploadTransactions(file: UploadFile) -> dict[str, str]:
             if id_tag is None and (tag != "" or subTag != ""):  # Tag not found
                 # TODO possibly just add the tag (or give the choice), currently aborts
                 raise HTTPException(status_code=422,
-                                    detail=f"Tag '{'/'.join(((tag, subTag)))}' "
+                                    detail=f"Tag '{row[requiredHeaders['Tag']]}' "
                                            f"not found")
 
             # Create the delta with translated literals into IDs
             try:
                 ts = datetime.fromisoformat(row[requiredHeaders["Timestamp"]])
                 ts_a = (datetime.fromisoformat(row[optionalHeaders["AnalyticsTs"]])
-                        if optionalHeaders["AnalyticsTs"] in row
+                        if (optionalHeaders["AnalyticsTs"] in row
+                            and row[optionalHeaders["AnalyticsTs"]] != "")
                         else None)
                 amount = float(row[requiredHeaders["Amount"]])
             except ValueError as e:
@@ -202,9 +217,7 @@ def uploadTags(file: UploadFile) -> dict[str, str]:
 
         for row in reader:
             tag, subTag = parseTagString(row[requiredHeaders["Tag"]])
-            archived = (bool(row[optionalHeaders["Archived"]])
-                        if optionalHeaders["Archived"] in row
-                        else False)
+            archived = bool(row.get(optionalHeaders["Archived"], False))
 
             if tag == "":  # Adding a top-level tag
                 if subTag not in queuedTopLevelTags:
@@ -289,16 +302,16 @@ def uploadTags(file: UploadFile) -> dict[str, str]:
                             detail=str(e))
 
 
-@router.post("/upload/accounts")  # TODO TODAY
+@router.post("/upload/accounts")
 def uploadAccounts(file: UploadFile) -> dict[str, str]:
-    requiredHeaders = {"account": "account", "currency": "currency",
-                       "initialBalance": "initialBalance", "openingDate": "openingDate"}
+    requiredHeaders = requiredHeadersAccounts
+    optionalHeaders = optionalHeadersAccounts
 
     # Check and parse uploaded csv file
     if file.filename is None or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=422, detail="Please upload a CSV file.")
 
-    # payloads = []
+    payloads = []
     try:
         reader = DictReader(StringIO(file.file.read().decode("utf-8-sig")))
         # "utf-8-sig" due to BOM from e.g. Excel
@@ -308,14 +321,25 @@ def uploadAccounts(file: UploadFile) -> dict[str, str]:
                                 detail="The uploaded CSV file is empty or missing a "
                                        "header row.")
 
-        if missing_headers := set(requiredHeaders.values()) - set(reader.fieldnames):
+        reader.fieldnames = [name.lower() for name in reader.fieldnames]
+
+        if missingFields := (set(requiredHeaders.values()) - set(reader.fieldnames)):
             raise HTTPException(status_code=422,
                                 detail="CSV is missing these required headers: "
-                                       f"{', '.join(sorted(missing_headers))}.")
+                                       f"{', '.join(sorted(missingFields))}")
 
-        # TODO implement file parsing
-        raise HTTPException(status_code=404,
-                            detail="Not implemented yet.")
+        for row in reader:
+            try:
+                ts = datetime.fromisoformat(row[requiredHeaders["openingDate"]])
+                currency = ISO4217(row[requiredHeaders["currency"]])
+                balance = float(row.get(optionalHeaders["initialBalance"], 0))
+            except ValueError as e:
+                raise HTTPException(status_code=422,
+                                    detail="Timestamp, float or currency parsing failed"
+                                           f": {e}")
+            payloads.append(AddingAccount(ts=ts, name=row[requiredHeaders["account"]],
+                                          currency=currency, balance=balance))
+
     except HTTPException:
         # Let through HTTPExceptions
         raise
@@ -334,25 +358,38 @@ def uploadAccounts(file: UploadFile) -> dict[str, str]:
     finally:
         file.file.close()
 
-    # TODO implement database commit
+    if not payloads:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=("No accounts specified in the CSV file."))
+
     # Commit parsed accounts into the database
-    # try:
-    #     with dbSession() as conn:
-    #         with conn.cursor() as cur:
-    #             # TODO
+    added = 0
+    failed = []
+    try:
+        with dbSession() as conn:
+            with conn.cursor() as cur:
+                for payload in payloads:
+                    ID, errorMsg = addNewAccount(payload, cur)
+                    if ID is not None:
+                        added += 1
+                    else:
+                        failed.append(((payload, errorMsg)))
 
-    #             return {"status": "ok",
-    #                     "detail": (f"Added {len(payloads)} accounts")}
-    # except Exception as e:
-    #     # Catch all
-    #     # TODO specify further if possible
-    #     raise HTTPException(status_code=500, detail=str(e))
-    #     # note: 500 is not too bad, if the db is not working as is should.
-    #     #       If the contents of the payload are not ok, if should be 422
-    #     #         -> e.g. incorrect timestamp 2026-04-03 09:75:38+01 should be 422
+        return {"status": "ok",
+                "detail": f"Accounts added: {added}; Accounts that already existed: "
+                          f"{len(failed)}.",
+                "failed": repr(failed)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Catch all
+        # TODO specify further if possible
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=str(e))
 
 
-@router.post("/upload/accounts")
+@router.post("/upload/zip")
 def uploadZip(file: UploadFile) -> dict[str, str]:
     # TODO implement everything
     raise HTTPException(status_code=404,
