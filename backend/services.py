@@ -2,7 +2,7 @@ from psycopg2.extensions import cursor
 from psycopg2.sql import SQL, Identifier
 
 # Custom imports
-from models.finance import AddingDelta, AddingTag, Archiving
+from models.finance import AddingAccount, AddingDelta, AddingTag, Archiving, DeltaIn
 from models.finance import TransactionWithMultipleDeltas
 
 
@@ -24,6 +24,37 @@ def addNewTag(payload: AddingTag, cur: cursor) -> int | None:
                 (payload.tag_name, payload.parent, payload.archived))
     (tag,) = cur.fetchone() or (None,)
     return tag
+
+
+def addNewAccount(payload: AddingAccount, cur: cursor) -> tuple[int | None, str]:
+    # 1. Insert account info
+    cur.execute("""INSERT INTO finance.accounts (account, currency)
+                   VALUES (%s, %s)
+                   ON CONFLICT (account, currency) DO NOTHING
+                   RETURNING id_a;""",
+                (payload.name, payload.currency))
+    (id_a,) = cur.fetchone() or (None,)
+
+    if id_a is None:
+        return (None, "Account creation failed during the creation of the account entry"
+                      ", possibly due to being a duplicate")
+    if abs(payload.balance) < 0.005:
+
+        return id_a, ""
+
+    # 2. Create transaction for initial balance if not 0.00
+    tPayload = AddingDelta(id_t=1,  # Hardcoded in the schema
+                           delta=DeltaIn(ts=payload.ts,
+                                         subtitle=None,
+                                         amount=payload.balance,
+                                         id_a=id_a,
+                                         tag=None))
+    response = addDeltaToExistingTransaction(tPayload, cur)
+
+    if response["status"] == "ok":
+        return id_a, ""
+    return (None, "Account creation failed during the creation of a delta for the "
+                  "initial balance")
 
 
 def addNewTransactionWithMultipleDeltas(payload: TransactionWithMultipleDeltas,
