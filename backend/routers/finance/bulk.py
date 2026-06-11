@@ -398,6 +398,8 @@ def uploadZip(file: UploadFile) -> dict[str, str]:
 
 @router.get("/download")
 def export_zip() -> StreamingResponse:
+    # BUG: accounts with 0 starting balance missing in exported csv
+    #      opening balance should not be included in exported transactions
     fileTs = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
 
     try:

@@ -4,6 +4,10 @@ possibly allow during application setup to choose the default
   -> formatting
   -> ...
 -->
+<!-- FIX ME
+     ISSUE: quite slow load times (even row selection takes time)
+     HYPOTHESIS: frontend (confirm with backend load time experiment)
+     NEXT STEPS: investigate cause, potentially solve by streamed loading / showing partial data-->
 
 <script setup>
 import { onMounted } from "vue";
