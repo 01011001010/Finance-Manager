@@ -39,7 +39,9 @@ def getDeltaLog() -> dict[str, str | list[Any]]:
                                       ts_log,
                                       balance_after
                                FROM finance.completeDeltaInfo
-                               ORDER BY ts DESC;""")
+                               ORDER BY ts DESC,
+                                        id_t DESC,
+                                        id_d ASC;""")
                 rows = cur.fetchall()
 
         transactions = []
