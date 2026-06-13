@@ -398,8 +398,6 @@ def uploadZip(file: UploadFile) -> dict[str, str]:
 
 @router.get("/download")
 def export_zip() -> StreamingResponse:
-    # BUG: accounts with 0 starting balance missing in exported csv
-    #      opening balance should not be included in exported transactions
     fileTs = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
 
     try:
@@ -418,12 +416,12 @@ def export_zip() -> StreamingResponse:
                     cur.execute("""SELECT a.currency,
                                           a.account,
                                           a.archived,
-                                          d.amount,
+                                          COALESCE(d.amount, 0.0) AS amount,
                                           d.ts
-                               FROM finance.accounts a
-                               LEFT JOIN finance.completeDeltaInfo d ON d.id_a = a.id_a
-                               WHERE d.id_t = 1
-                               ORDER BY a.account ASC;""")
+                                   FROM finance.accounts a
+                                   LEFT JOIN finance.completeDeltaInfo d
+                                     ON d.id_a = a.id_a AND d.id_t = 1
+                                   ORDER BY a.account ASC;""")
                     # Assumes use of a reserved id_t hardcoded in the schema definition.
                     # Unless broken somewhere else, it should not be possible to have
                     # duplicate entries for the same account name and currency pair.
@@ -464,6 +462,7 @@ def export_zip() -> StreamingResponse:
                                           d.ts_analytics,
                                           d.pinned
                                FROM finance.completeDeltaInfo d
+                               WHERE d.id_t <> 1
                                ORDER BY d.id_t ASC;""")
 
                     previousId_t = None
