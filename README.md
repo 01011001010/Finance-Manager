@@ -106,7 +106,8 @@ docker compose -f 'docker-compose.dev.yaml' down
 - [x] Production and development separation
 - [ ] Bulk import & export
     - [x] Export
-    - [ ] Import
+    - [x] Import
+    - [ ] UI improvements (file dropping, download notification)
 - [ ] Household inventory
     - [x] Separate db Schemas and backend router
     - [ ] Database schema

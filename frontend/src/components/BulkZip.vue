@@ -48,7 +48,7 @@ const onUploadError = (event) => {
     mode="basic"
     name="file"
     url="/api/finance/bulk/upload/zip"
-    accept=".csv"
+    accept=".zip"
     :maxFileSize="1000000"
     @upload="onUpload"
     @error="onUploadError"

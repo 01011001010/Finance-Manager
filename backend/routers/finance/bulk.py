@@ -391,9 +391,63 @@ def uploadAccounts(file: UploadFile) -> dict[str, str]:
 
 @router.post("/upload/zip")
 def uploadZip(file: UploadFile) -> dict[str, str]:
-    # TODO implement everything
-    raise HTTPException(status_code=404,
-                        detail="Not implemented yet.")
+    # Check and parse uploaded zip file
+    if file.filename is None or not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=422, detail="Please upload a .zip file.")
+
+    try:
+        zipBytes = file.file.read()
+        zipBuffer = BytesIO(zipBytes)
+
+        results = {}
+
+        with ZipFile(zipBuffer, "r") as zipFile:
+            fileNameMap = {name.lower(): name for name in zipFile.namelist()}
+
+            # 1. Process Accounts
+            if "accounts.csv" in fileNameMap:
+                accountBytes = zipFile.read(fileNameMap["accounts.csv"])
+                results["acc"] = uploadAccounts(UploadFile(filename="accounts.csv",
+                                                           file=BytesIO(accountBytes)))
+
+            # 2. Process Tags
+            if "tags.csv" in fileNameMap:
+                tagsBytes = zipFile.read(fileNameMap["tags.csv"])
+                results["tags"] = uploadTags(UploadFile(filename="tags.csv",
+                                                        file=BytesIO(tagsBytes)))
+
+            # 3. Process Transactions
+            if "transactions.csv" in fileNameMap:
+                transactionBytes = zipFile.read(fileNameMap["transactions.csv"])
+                results["transactions"] = uploadTransactions(
+                                            UploadFile(filename="transactions.csv",
+                                                       file=BytesIO(transactionBytes)))
+
+            # Abort if the .zip did not contain any of the expected csv-s
+            if not results:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                                    detail="The .zip file did not contain any of the "
+                                           "expected files: 'accounts.csv', 'tags.csv',"
+                                           " or 'transactions.csv'.")
+
+        successful = len([None
+                          for result in results.values()
+                          if result['status'] == 'ok'])
+        return {"status": ("ok"
+                           if all(map(lambda result: result["status"] == "ok",
+                                      results.values()))
+                           else "partial_success"),
+                "detail": f"Successfully processed {successful} .csv files.",
+                "results": repr(results)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Catch all
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Error processing .zip file: {e}")
+    finally:
+        file.file.close()
 
 
 @router.get("/download")
