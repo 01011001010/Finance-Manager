@@ -7,7 +7,11 @@ possibly allow during application setup to choose the default
 <!-- FIX ME
      ISSUE: quite slow load times (even row selection takes time)
      HYPOTHESIS: frontend (confirm with backend load time experiment)
-     NEXT STEPS: investigate cause, potentially solve by streamed loading / showing partial data-->
+     NEXT STEPS: investigate cause, potentially solve by streamed loading / showing partial data
+-->
+<!-- FIX ME
+     ISSUE: <NewDelta /> stickiness stops working when scrolling past Chronological Log's top
+-->
 
 <script setup>
 import { onMounted } from "vue";
