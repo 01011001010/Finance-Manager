@@ -132,3 +132,19 @@ JOIN finance.deltasPerTransaction dt ON dt.id_t = t.id_t
 JOIN finance.deltasWithBalance d ON d.id_d = dt.id_d
 JOIN finance.accounts a ON a.id_a = d.id_a
 LEFT JOIN finance.tagsWithFullName ta ON ta.tag = d.tag;
+
+
+CREATE VIEW finance.accountsWithCurrentBalance AS
+WITH rankedDeltas AS (SELECT id_a,
+                             ts,
+                             balance_after,
+                             ROW_NUMBER() OVER (PARTITION BY id_a ORDER BY ts DESC) AS rn
+                      FROM finance.deltasWithBalance)
+SELECT a.id_a,
+       a.currency,
+       a.account,
+       a.archived,
+       d.ts,
+       d.balance_after
+FROM finance.accounts a
+LEFT JOIN rankedDeltas d ON d.id_a = a.id_a AND d.rn = 1;

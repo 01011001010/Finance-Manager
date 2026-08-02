@@ -51,8 +51,10 @@ def getAccounts() -> dict[str, str | list[dict[str, Any]]]:
                 cur.execute("""SELECT a.id_a,
                                       a.currency,
                                       a.account,
-                                      a.archived
-                               FROM finance.accounts a
+                                      a.archived,
+                                      a.ts,
+                                      a.balance_after
+                               FROM finance.accountsWithCurrentBalance a
                                ORDER BY a.id_a ASC;""")
                 rows = cur.fetchall()
 
@@ -60,8 +62,10 @@ def getAccounts() -> dict[str, str | list[dict[str, Any]]]:
                 "data": [{"id_a": id_a,
                           "currency": currency,
                           "account": name,
-                          "hidden": hidden}
-                         for id_a, currency, name, hidden in rows]}
+                          "hidden": hidden,
+                          "balance": balance,
+                          "ts": ts}
+                         for id_a, currency, name, hidden, ts, balance in rows]}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=str(e))
