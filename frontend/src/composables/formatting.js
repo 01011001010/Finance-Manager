@@ -19,26 +19,13 @@ export function getFormatters() {
     return `${getCurrencySymbol(currency)}\u202F`;
   };
 
-  const formatCurrency = (value, currency) => {
+  const formatNumber = (value) => {
     if (value == null || isNaN(value)) return "—";
 
-    const formatter = new Intl.NumberFormat(defaultLocale, {
+    return new Intl.NumberFormat(defaultLocale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    });
-
-    return `${getCurrencyPrefix(currency)}${formatter.format(value)}`;
-  };
-
-  const monoSpaceCurrency = (value, currency) => {
-    if (value == null || isNaN(value)) return "—";
-
-    const formatter = new Intl.NumberFormat(defaultLocale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
-    return `<span class="font-mono">${getCurrencySymbol(currency)}</span>\u202F<span class="font-mono">${formatter.format(value)}</span>`;
+    }).format(value);
   };
 
   const formatDate = (value) => {
@@ -55,9 +42,10 @@ export function getFormatters() {
   };
 
   return {
+    getCurrencySymbol,
+    formatNumber,
     getCurrencyPrefix,
-    formatCurrency,
-    monoSpaceCurrency,
+    // monoSpaceCurrency,
     formatDate,
     defaultLocale,
   };

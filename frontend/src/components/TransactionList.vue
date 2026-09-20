@@ -39,7 +39,7 @@ const { deltas, pinnedTransactions, transactionOverview, selectedTransaction } =
   getData();
 const { isPinned, togglePin } = pinUtils();
 const { successToast, neutralToast, errorToast } = customToaster();
-const { monoSpaceCurrency, formatDate } = getFormatters();
+const { getCurrencySymbol, formatNumber, formatDate } = getFormatters();
 
 const expandedRows = ref({});
 const items =
@@ -127,6 +127,7 @@ if (!props.autoExpand) {
     dataKey="id_t"
     scrollable
     scrollHeight="flex"
+    :virtualScrollerOptions="{ itemSize: 41 }"
     :showHeaders="false"
     @rowExpand="onRowExpand"
     @rowCollapse="onRowCollapse"
@@ -134,7 +135,9 @@ if (!props.autoExpand) {
     @rowUnselect="onRowUnselect"
     tableStyle="min-width: 50rem"
     size="small"
+    class="h-full flex-1 min-h-0"
     :pt="{
+      wrapper: { class: 'h-full' },
       rowExpansionCell: { class: 'p-0' },
       bodyrow: ({ context }) => ({
         class: [
@@ -231,7 +234,7 @@ if (!props.autoExpand) {
     </Column>
 
     <template #expansion="slotProps">
-      <div>
+      <div v-if="expandedRows && expandedRows[slotProps.data.id_t]">
         <DataTable
           :value="slotProps.data.deltas"
           :showHeaders="false"
@@ -254,14 +257,14 @@ if (!props.autoExpand) {
             class="w-[14%] text-right pr-6 whitespace-nowrap"
           >
             <template #body="slotProps">
-              <div
-                v-html="
-                  monoSpaceCurrency(
-                    slotProps.data.amount,
-                    slotProps.data.currency,
-                  )
-                "
-              ></div>
+              <div>
+                <span class="font-mono">{{
+                  getCurrencySymbol(slotProps.data.currency)
+                }}</span
+                >&#8239;<span class="font-mono">{{
+                  formatNumber(slotProps.data.amount)
+                }}</span>
+              </div>
             </template>
           </Column>
           <Column field="account" class="w-[16%] pl-8 truncate"></Column>
@@ -270,14 +273,14 @@ if (!props.autoExpand) {
             class="w-[17%] text-right pr-6 whitespace-nowrap"
           >
             <template #body="slotProps">
-              <div
-                v-html="
-                  monoSpaceCurrency(
-                    slotProps.data.balance_after,
-                    slotProps.data.currency,
-                  )
-                "
-              ></div>
+              <div>
+                <span class="font-mono">{{
+                  getCurrencySymbol(slotProps.data.currency)
+                }}</span
+                >&#8239;<span class="font-mono">{{
+                  formatNumber(slotProps.data.balance_after)
+                }}</span>
+              </div>
             </template>
           </Column>
           <Column field="ts" class="w-[20%] truncate">

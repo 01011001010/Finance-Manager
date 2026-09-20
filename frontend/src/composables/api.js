@@ -1,13 +1,13 @@
-import { ref, computed } from "vue";
+import { ref, shallowRef, computed } from "vue";
 
 // Data refs
-const deltas = ref([]);
-const transactionOverview = ref([]);
+const deltas = shallowRef([]);
+const transactionOverview = shallowRef([]);
+const pinnedTransactions = shallowRef([]);
+
 const accountsWithArchived = ref([]);
 const tagsWithArchived = ref([]);
 const selectedTransaction = ref(null);
-
-const pinnedTransactions = ref([]);
 
 const accounts = computed(() =>
   accountsWithArchived.value.filter((a) => !a.hidden),

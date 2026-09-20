@@ -26,9 +26,19 @@ onMounted(async () => {
 
 <template>
   <div class="w-full h-full flex flex-row gap-4">
-    <div class="w-full h-full flex flex-col">
-      <Fieldset legend="Transactions">
-        <TransactionList :dataSource="'overview'" :autoExpand="false" />
+    <div class="w-full h-full flex flex-col flex-1 min-h-0 gap-4">
+      <Fieldset
+        legend="Transactions"
+        :pt="{
+          root: { class: 'flex flex-col flex-1 min-h-0' },
+          contentContainer: { class: 'flex flex-col flex-1 min-h-0' },
+          contentWrapper: { class: 'flex flex-col flex-1 min-h-0 h-full' },
+          content: { class: 'flex flex-col flex-1 min-h-0 h-full p-0' },
+        }"
+      >
+        <div class="flex-1 min-h-0 h-full flex flex-col">
+          <TransactionList :dataSource="'overview'" :autoExpand="false" />
+        </div>
       </Fieldset>
     </div>
   </div>

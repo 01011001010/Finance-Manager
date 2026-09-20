@@ -18,8 +18,9 @@ const menuItems = ref([
 </script>
 
 <template>
-  <div class="w-full h-screen">
-    <Menubar :model="menuItems">
+  <div class="w-full h-screen flex flex-col overflow-hidden">
+    <!-- TODO overflow??? -->
+    <Menubar :model="menuItems" class="shrink-0">
       <template #start>
         <div class="flex items-center gap-2 mr-4">
           <i class="pi pi-chart-line text-primary text-2xl"></i>
@@ -51,7 +52,7 @@ const menuItems = ref([
       </template>
     </Menubar>
 
-    <div class="p-4 h-full">
+    <div class="p-4 flex-1 min-h-0 flex flex-col">
       <Toast position="bottom-left" />
       <router-view />
     </div>
